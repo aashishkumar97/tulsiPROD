@@ -131,12 +131,33 @@
     return parts.join(' ') + ' Rupees Only';
   }
 
-  // Load the logo image referenced by a hidden field (#logoPath) into a DataURL
-  // and return its natural dimensions so it can be scaled without distortion.
   async function getLogoDataUrl() {
-    try {
+    return new Promise((resolve) => {
       const logoPathInput = document.getElementById('logoPath');
       const logoPath = logoPathInput?.value || '../images/logo.png';
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          const dataUrl = canvas.toDataURL('image/png');
+          resolve({ dataUrl, width: img.naturalWidth, height: img.naturalHeight });
+        } catch (e) {
+          console.warn('Unable to process logo for PDF', e);
+          resolve(null);
+        }
+      };
+      img.onerror = () => {
+        console.warn('Logo image failed to load');
+        resolve(null);
+      };
+      img.src = logoPath;
+    });
+=======
       const res = await fetch(logoPath);
       const blob = await res.blob();
       return await new Promise((resolve, reject) => {

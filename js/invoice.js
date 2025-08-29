@@ -130,12 +130,6 @@
     if (rest)     parts.push(threeDigits(rest));
     return parts.join(' ') + ' Rupees Only';
   }
-
-  // Load the logo image referenced by a hidden field (#logoPath), convert it to
-  // a DataURL via an off-screen canvas, and return the image's natural
-  // dimensions so it can be scaled without distortion. Using an <img> element
-  // avoids fetch() restrictions when the app is opened directly from the file
-  // system.
   async function getLogoDataUrl() {
     return new Promise((resolve) => {
       const logoPathInput = document.getElementById('logoPath');
@@ -162,6 +156,26 @@
       };
       img.src = logoPath;
     });
+=======
+      const res = await fetch(logoPath);
+      const blob = await res.blob();
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result;
+          const img = new Image();
+          img.onload = () =>
+            resolve({ dataUrl, width: img.naturalWidth, height: img.naturalHeight });
+          img.onerror = () => resolve({ dataUrl, width: 0, height: 0 });
+          img.src = dataUrl;
+        };
+        reader.onerror = (e) => reject(e);
+        reader.readAsDataURL(blob);
+      });
+    } catch (err) {
+      console.warn('Unable to load logo for PDF', err);
+      return null;
+    }
   }
 
   /**

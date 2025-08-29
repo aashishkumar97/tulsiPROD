@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Tulsi Care Clinic – Generate Invoice</title>
+
+  <!-- Page styling (matches your preferred aesthetic) -->
+  <!-- Pull the invoice stylesheet from the shared css folder -->
+  <link rel="stylesheet" href="../css/invoice.css"/>
+
+  <!-- jsPDF for PDF generation -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+  <!-- Supabase client library (for database access) -->
+  <!--
+    NOTE: Replace the placeholders in invoice.js with your own Supabase
+    project URL and anonymous API key. This script exposes a global
+    `supabase` object used by invoice.js to fetch patients and store
+    invoices.
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Optionally initialise a global supabase client (see js/supabase-client.js). This
+       file defines `window.supabaseClient` when the Supabase library has
+       loaded. If you do not provide your credentials here, invoice.js will
+       fall back to creating its own client with placeholders. -->
+  <script src="../js/supabase-client.js"></script>
+</head>
+<body class="app-body">
+  <!-- Top header -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo" aria-hidden="true"></div>
+      <div class="brand-text">
+        <h1>Tulsi Care Clinic</h1>
+        <p>Doctor Portal</p>
+      </div>
+    </div>
+    <nav class="nav-actions">
+      <a class="btn btn-outline" href="dashboard.html">Back to Dashboard</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <form id="invoiceForm" class="card card--elevated invoice-form">
+      <header class="section-head">
+        <div>
+          <h2>Generate Invoice</h2>
+          <p class="muted small">Tick services, enter amounts, then print or download a receipt-sized PDF.</p>
+        </div>
+        <div class="section-actions no-print">
+          <button type="button" id="downloadPdf" class="btn btn-success">Download PDF</button>
+          <button type="button" id="printPage"   class="btn btn-outline">Print</button>
+          <button type="reset"  id="resetForm"   class="btn btn-ghost">Reset</button>
+        </div>
+      </header>
+
+      <!-- Header (clinic/doctor). Logo path is hidden but still available to JS -->
+      <fieldset class="fieldset">
+        <legend>Header</legend>
+        <div class="grid g-3">
+          <div class="form-row">
+            <label for="clinicName">Clinic name</label>
+            <input id="clinicName" value="Tulsi Sugar Care Clinic"/>
+          </div>
+          <div class="form-row">
+            <label for="doctorName">Doctor (optional)</label>
+            <!-- Default value set to Dr. Pawan Kumar; change as needed. -->
+            <input id="doctorName" value="Dr. Pawan Kumar" placeholder="e.g., Dr. Pawan Kumar" />
+          </div>
+          <!-- Hidden logo path (PDF will still use it) -->
+          <!-- Use the correct relative logo path -->
+          <input type="hidden" id="logoPath" value="../images/logo.png"/>
+        </div>
+      </fieldset>
+
+      <!-- Receipt meta -->
+      <fieldset class="fieldset">
+        <legend>Receipt Details</legend>
+        <div class="grid g-4">
+          <div class="form-row">
+            <label for="invoiceNo">No. (auto)</label>
+            <input id="invoiceNo" readonly />
+          </div>
+          <div class="form-row">
+            <label for="invoiceDate">Date</label>
+            <input id="invoiceDate" type="date" />
+          </div>
+          <!-- Payer details: defaulted to doctor; edit if needed -->
+          <div class="form-row">
+            <label for="receivedFrom">Received with thanks from</label>
+            <input id="receivedFrom" required />
+            <span class="hint">This will default to the doctor’s name; you may edit if needed.</span>
+          </div>
+          <!-- Sum of Rs removed (PDF total is computed from items) -->
+        </div>
+      </fieldset>
+
+      <!-- Services as line items -->
+      <fieldset class="fieldset">
+        <legend>On Account of</legend>
+        <table class="items-form" style="width:100%">
+          <thead>
+            <tr>
+              <th>Use</th>
+              <th>Service</th>
+              <th>Amount (PKR)</th>
+            </tr>
+          </thead>
+          <tbody id="serviceItems">
+            <tr>
+              <td><input type="checkbox" class="svc-check"/></td>
+              <td>Consultation</td>
+              <td><input type="number" class="svc-amt" min="0" step="0.01" placeholder="0.00"/></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="svc-check"/></td>
+              <td>ECG</td>
+              <td><input type="number" class="svc-amt" min="0" step="0.01" placeholder="0.00"/></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="svc-check"/></td>
+              <td>Exercise ECG</td>
+              <td><input type="number" class="svc-amt" min="0" step="0.01" placeholder="0.00"/></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="svc-check"/></td>
+              <td>FBS</td>
+              <td><input type="number" class="svc-amt" min="0" step="0.01" placeholder="0.00"/></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="svc-check"/></td>
+              <td>RBS</td>
+              <td><input type="number" class="svc-amt" min="0" step="0.01" placeholder="0.00"/></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="svc-check"/></td>
+              <td>Urine Test</td>
+              <td><input type="number" class="svc-amt" min="0" step="0.01" placeholder="0.00"/></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="svc-check"/></td>
+              <td><input type="text" class="svc-label" placeholder="Other"/></td>
+              <td><input type="number" class="svc-amt" min="0" step="0.01" placeholder="0.00"/></td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="muted small">Only ticked items will be printed. Amounts are totaled automatically in the PDF.</p>
+      </fieldset>
+
+      <!-- Bottom Rs (optional override) -->
+      <fieldset class="fieldset">
+        <legend>Footer Amount</legend>
+        <div class="grid g-3">
+          <div class="form-row">
+            <label for="rsBottom">Rs (bottom)</label>
+            <input id="rsBottom" type="number" min="0" step="0.01" placeholder="auto from selected items"/>
+            <span class="hint">Leave blank to copy the total from selected services.</span>
+          </div>
+        </div>
+      </fieldset>
+
+      <p id="msg" class="status" aria-live="polite"></p>
+    </form>
+  </main>
+
+  <footer class="site-foot">
+    <small>© <span id="year"></span> Tulsi Care Clinic. All rights reserved.</small>
+  </footer>
+
+  <!-- Load the invoice controller from the parent js folder -->
+  <script src="../js/invoice.js"></script>
+  <script>
+    // Auth guard + year
+    if (sessionStorage.getItem('auth') !== 'true') window.location.replace('../index.html');
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

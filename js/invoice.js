@@ -293,8 +293,8 @@
     doc.text('Tulsi Sugar Care Clinic', 40, y, { align: 'center' });
     y += 3.5;
     // Address
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.0);
     addrWrapped.forEach(line => {
       doc.text(line, 40, y, { align: 'center' });
       y += 3;

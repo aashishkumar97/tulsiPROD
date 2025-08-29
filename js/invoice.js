@@ -131,23 +131,37 @@
     return parts.join(' ') + ' Rupees Only';
   }
 
-  // Load the logo image referenced by a hidden field (#logoPath) into a DataURL.
+  // Load the logo image referenced by a hidden field (#logoPath), convert it to
+  // a DataURL via an off-screen canvas, and return the image's natural
+  // dimensions so it can be scaled without distortion. Using an <img> element
+  // avoids fetch() restrictions when the app is opened directly from the file
+  // system.
   async function getLogoDataUrl() {
-    try {
+    return new Promise((resolve) => {
       const logoPathInput = document.getElementById('logoPath');
       const logoPath = logoPathInput?.value || '../images/logo.png';
-      const res = await fetch(logoPath);
-      const blob = await res.blob();
-      return await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = (e) => reject(e);
-        reader.readAsDataURL(blob);
-      });
-    } catch (err) {
-      console.warn('Unable to load logo for PDF', err);
-      return null;
-    }
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          const dataUrl = canvas.toDataURL('image/png');
+          resolve({ dataUrl, width: img.naturalWidth, height: img.naturalHeight });
+        } catch (e) {
+          console.warn('Unable to process logo for PDF', e);
+          resolve(null);
+        }
+      };
+      img.onerror = () => {
+        console.warn('Logo image failed to load');
+        resolve(null);
+      };
+      img.src = logoPath;
+    });
   }
 
   /**
@@ -186,13 +200,24 @@
 
     let y = 10; // generous top margin
 
-    // Logo with ample room
-    if (logoData) {
-      const logoWidth = 30;
-      const logoHeight = 20;
+    // Logo with ample room (maintain aspect ratio). Reserve vertical space even
+    // if the image fails to load so text never collides with the expected logo
+    // area.
+    const reservedLogoSpace = 28; // mm
+    if (logoData?.dataUrl) {
+      const logoMaxWidth = 35;  // mm
+      const logoMaxHeight = 20; // mm
+      let logoWidth = logoMaxWidth;
+      let logoHeight = logoWidth * (logoData.height ? logoData.height / logoData.width : 1);
+      if (logoHeight > logoMaxHeight) {
+        logoHeight = logoMaxHeight;
+        logoWidth = logoHeight * (logoData.width ? logoData.width / logoData.height : 1);
+      }
       const xLogo = (pdfWidth - logoWidth) / 2;
-      doc.addImage(logoData, 'PNG', xLogo, y, logoWidth, logoHeight);
+      doc.addImage(logoData.dataUrl, 'PNG', xLogo, y, logoWidth, logoHeight);
       y += logoHeight + 8;
+    } else {
+      y += reservedLogoSpace; // push text down if no logo
     }
 
     // Invoice number

@@ -131,7 +131,8 @@
     return parts.join(' ') + ' Rupees Only';
   }
 
-  // Load the logo image referenced by a hidden field (#logoPath) into a DataURL.
+  // Load the logo image referenced by a hidden field (#logoPath) into a DataURL
+  // and return its natural dimensions so it can be scaled without distortion.
   async function getLogoDataUrl() {
     try {
       const logoPathInput = document.getElementById('logoPath');
@@ -140,7 +141,14 @@
       const blob = await res.blob();
       return await new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
+        reader.onload = () => {
+          const dataUrl = reader.result;
+          const img = new Image();
+          img.onload = () =>
+            resolve({ dataUrl, width: img.naturalWidth, height: img.naturalHeight });
+          img.onerror = () => resolve({ dataUrl, width: 0, height: 0 });
+          img.src = dataUrl;
+        };
         reader.onerror = (e) => reject(e);
         reader.readAsDataURL(blob);
       });
@@ -186,12 +194,18 @@
 
     let y = 10; // generous top margin
 
-    // Logo with ample room
-    if (logoData) {
-      const logoWidth = 30;
-      const logoHeight = 20;
+    // Logo with ample room (maintain aspect ratio)
+    if (logoData?.dataUrl) {
+      const logoMaxWidth = 35;  // mm
+      const logoMaxHeight = 20; // mm
+      let logoWidth = logoMaxWidth;
+      let logoHeight = logoWidth * (logoData.height ? logoData.height / logoData.width : 1);
+      if (logoHeight > logoMaxHeight) {
+        logoHeight = logoMaxHeight;
+        logoWidth = logoHeight * (logoData.width ? logoData.width / logoData.height : 1);
+      }
       const xLogo = (pdfWidth - logoWidth) / 2;
-      doc.addImage(logoData, 'PNG', xLogo, y, logoWidth, logoHeight);
+      doc.addImage(logoData.dataUrl, 'PNG', xLogo, y, logoWidth, logoHeight);
       y += logoHeight + 8;
     }
 

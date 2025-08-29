@@ -1,0 +1,92 @@
+/* Page set to 80mm width x 127mm (≈5in) height */
+@page {
+  size: 80mm 127mm;
+  margin: 0;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  background: #fff;
+  color: #111;
+}
+
+/* Roll container — fixed height to cap at 5 inches */
+.roll {
+  width: 80mm;                 /* match @page width */
+  padding: 5mm 4mm 6mm;        /* inner margins */
+  height: 127mm;               /* hard cap = 5 inches */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;            /* never exceed 5 inches visually */
+}
+
+/* Header logo */
+.head { text-align: center; margin-bottom: 3mm; }
+.head img {
+  max-width: 46mm;
+  height: auto;
+}
+
+/* Meta */
+.meta .row { display: flex; justify-content: space-between; line-height: 1.2; margin: 0.5mm 0; }
+.meta .lab { font-size: 3.2mm; font-weight: 600; }
+.meta .val { font-size: 3.2mm; }
+.underline {
+  display: inline-block;
+  border-bottom: 0.3mm solid #111;
+  padding-bottom: 0.5mm;
+  min-width: 30mm;
+}
+
+/* Items */
+.items { margin-top: 2mm; }
+.items .title { font-size: 3.2mm; font-weight: 700; margin-bottom: 1mm; }
+#itemsList { list-style: none; padding: 0; margin: 0; }
+#itemsList li {
+  font-size: 3mm;
+  line-height: 1.25;
+  margin: 0.6mm 0;
+  word-wrap: break-word;
+}
+
+/* Totals */
+.totals { margin-top: 1.5mm; }
+.totals .row {
+  display: flex; justify-content: space-between;
+  font-size: 3.2mm; font-weight: 700;
+  margin: 0.8mm 0;
+}
+
+/* Footer pinned to bottom within the 5-inch canvas */
+.foot {
+  margin-top: auto;        /* push footer to bottom of fixed-height .roll */
+  text-align: center;
+}
+.sigline {
+  width: 32mm; height: 0; border-top: 0.4mm solid #111; margin: 0 0 2mm 0;
+}
+.clinic { font-size: 3.4mm; font-weight: 700; }
+.addr   { font-size: 1mm; }
+
+/* Screen tweaks (optional) */
+@media screen {
+  body { background: #f5f5f5; }
+  .roll { background: #fff; margin: 10px auto; box-shadow: 0 0 0.5rem rgba(0,0,0,.12); }
+}
+
+/* (kept) helpers for older structure */
+.receipt-body, .receipt {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.signature-block { margin-top: auto; text-align: center; }
+.signature-line {
+  border: none;
+  border-top: 2px solid #000;
+  width: 60%;
+  margin: 0 auto 6px auto;
+}

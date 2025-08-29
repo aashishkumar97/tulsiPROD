@@ -1,0 +1,155 @@
+:root{
+  --ink:#0f172a; --muted:#6b7280; --bg:#f7fafc; --card:#fff;
+  --primary:#1f6feb; --success:#1fa97a; --outline:rgba(15,23,42,.08);
+  --ring:rgba(31,111,235,.18); --radius:16px; --shadow:0 12px 30px rgba(17,24,39,.09);
+}
+
+/* Base */
+*{box-sizing:border-box} html,body{height:100%}
+body{
+  margin:0;
+  font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+  color:var(--ink);
+  background:var(--bg)
+}
+a{color:var(--primary);text-decoration:none}
+
+/* Header */
+.app-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px min(3vw,28px);
+  background:#ffffffcc;backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--outline)
+}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{
+  width:38px;height:38px;border-radius:10px;
+  background:conic-gradient(from 225deg,#79b4ff,#00d1cf,#79b4ff);
+  box-shadow:inset 0 0 0 6px rgba(255,255,255,.8)
+}
+.brand-text h1{font-family:ui-serif,Georgia,serif;font-size:1.2rem;margin:0}
+.brand-text p{margin:0;color:var(--muted)}
+
+/* Layout */
+.container{max-width:1100px;margin:18px auto;padding:0 min(3vw,28px)}
+.card{
+  background:var(--card);
+  border:1px solid var(--outline);
+  border-radius:var(--radius);
+  padding:clamp(16px,3vw,28px)
+}
+.card--elevated{box-shadow:var(--shadow)}
+.small{font-size:.9rem}
+.muted{color:var(--muted)}
+
+/* Section header */
+.section-head{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:10px;margin-bottom:12px
+}
+.section-head h2{margin:0}
+.section-actions{display:flex;gap:10px;flex-wrap:wrap}
+
+/* Fieldsets & form controls */
+.fieldset{border:1px dashed var(--outline); border-radius:12px; padding:14px; margin:14px 0}
+legend{padding:0 8px; color:#2f4052; font-weight:700}
+
+.grid{display:grid;gap:14px}
+.g-4{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.g-3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+
+.form-row{display:grid;gap:6px}
+label{font-size:.92rem;color:#2f4052}
+.hint{color:var(--muted); font-size:.82rem}
+
+input,select{
+  width:100%;padding:12px 14px;border-radius:12px;
+  border:1px solid var(--outline);background:#fcfeff;color:var(--ink);
+  outline:none;transition:box-shadow .15s ease,border-color .15s ease
+}
+input:focus,select:focus{border-color:#7fb2ff;box-shadow:0 0 0 4px var(--ring);background:#fff}
+
+.invoice-form{display:grid;gap:12px}
+
+/* =========================
+   Services table (Use / Service / Amount)
+   ========================= */
+.items-form{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0 8px;             /* soft gap between rows */
+}
+
+.items-form thead th{
+  text-align:left;
+  font-weight:700;color:#2f4052;
+  background:#f7fbff;
+  border:1px solid var(--outline);
+  padding:10px 12px;
+}
+.items-form thead th:first-child{
+  border-top-left-radius:12px; border-bottom-left-radius:12px;
+  width:70px;                      /* checkbox column width */
+}
+.items-form thead th:last-child{
+  border-top-right-radius:12px; border-bottom-right-radius:12px;
+  min-width:180px;                 /* amount column min width */
+}
+
+.items-form tbody td{
+  background:#fff;
+  padding:10px 12px;
+  border-top:1px solid var(--outline);
+  border-bottom:1px solid var(--outline);
+  vertical-align:middle;
+}
+.items-form tbody td:first-child{
+  border-left:1px solid var(--outline);
+  border-top-left-radius:12px; border-bottom-left-radius:12px;
+}
+.items-form tbody td:last-child{
+  border-right:1px solid var(--outline);
+  border-top-right-radius:12px; border-bottom-right-radius:12px;
+}
+
+/* Inputs inside table */
+.items-form input[type="checkbox"]{
+  width:18px;height:18px;accent-color:var(--primary);cursor:pointer
+}
+.items-form .svc-amt,
+.items-form .svc-label{
+  width:100%;min-width:0;
+  padding:10px;border-radius:10px;border:1px solid var(--outline);background:#fff
+}
+
+/* Print helpers */
+.only-print{display:none}
+.no-print{display:block}
+
+/* Totals (if you re-add later) */
+.totals-fieldset{display:grid}
+.totals{
+  margin-left:auto;display:grid;gap:10px;max-width:420px;width:100%
+}
+.totals-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.totals-row.grand strong{font-size:1.4rem}
+.totals-row input{width:120px}
+
+/* Buttons */
+.btn{
+  appearance:none;border:none;cursor:pointer;font-weight:700;
+  border-radius:12px;padding:10px 14px
+}
+.btn-outline{background:transparent;border:1px solid var(--outline)}
+.btn-ghost{background:transparent;color:var(--muted)}
+.btn-success{background:var(--success);color:#fff}
+.status{min-height:20px}
+
+/* Print layout (hide chrome when printing the page itself) */
+@media print{
+  .app-header,.site-foot,.no-print,.section-actions{display:none !important}
+  body{background:#fff}
+  .container{max-width:none;margin:0;padding:0}
+  .card{border:none;box-shadow:none;padding:0}
+  .only-print{display:block}
+}

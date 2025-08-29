@@ -86,11 +86,11 @@
             <label for="invoiceDate">Date</label>
             <input id="invoiceDate" type="date" />
           </div>
-          <!-- Payer details: defaulted to doctor; edit if needed -->
+          <!-- Payer details -->
           <div class="form-row">
-            <label for="receivedFrom">Received with thanks from</label>
-            <input id="receivedFrom" required />
-            <span class="hint">This will default to the doctor’s name; you may edit if needed.</span>
+            <label for="receivedFrom">Received with Thanks from:</label>
+            <input id="receivedFrom" placeholder="Patient name" required />
+            <span class="hint">Enter the name of the person paying.</span>
           </div>
           <!-- Sum of Rs removed (PDF total is computed from items) -->
         </div>

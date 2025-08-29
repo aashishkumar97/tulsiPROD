@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tulsi Care Clinic – Patient Profile</title>
+  <!-- Pull the patient form stylesheet from the shared css folder -->
+  <link rel="stylesheet" href="../css/patient_form.css" />
+
+  <!-- Supabase client library (for database access) -->
+  <!--
+    NOTE: Replace the placeholders in patient_form.js with your own Supabase
+    project URL and anonymous API key. This script exposes a global
+    `supabase` object used by the JS to read/write patient records.
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Initialize Supabase client with your project credentials.  See
+       js/supabase-client.js for configuration details. -->
+  <script src="../js/supabase-client.js"></script>
+</head>
+<body class="app-body">
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo" aria-hidden="true"></div>
+      <div class="brand-text">
+        <h1>Tulsi Care Clinic</h1>
+        <p>Doctor Portal</p>
+      </div>
+    </div>
+    <nav class="nav-actions">
+      <a class="btn btn-outline" href="dashboard.html">Back to Dashboard</a>
+    </nav>
+  </header>
+
+  <main class="profile-layout">
+    <!-- LEFT: Persona / Basic Info -->
+    <aside class="persona card card--elevated">
+      <div class="persona-head">
+        <div class="avatar" aria-hidden="true"></div>
+        <div class="id-block">
+          <label for="refNo">Patient Ref #</label>
+          <!-- Reference number is auto-generated and read-only -->
+          <input id="refNo" placeholder="Auto-generated" readonly />
+        </div>
+      </div>
+
+      <div class="persona-section">
+        <div class="form-row">
+          <label for="name">Full Name</label>
+          <input id="name" placeholder="Full name" required />
+        </div>
+
+        <div class="split-2">
+          <div class="form-row">
+            <label for="age">Age</label>
+            <input id="age" type="number" min="0" max="120" required />
+          </div>
+          <div class="form-row">
+            <label for="date">Date</label>
+            <input id="date" type="date" required />
+          </div>
+        </div>
+
+        <!-- Cast field removed -->
+      </div>
+
+      <div class="persona-section">
+        <details class="collapsible" open>
+          <summary>Contact Details</summary>
+          <div class="form-row">
+            <label for="address">Address •</label>
+            <input id="address" placeholder="Street, City, Postcode" />
+          </div>
+          <div class="form-row">
+            <label for="mobile">Mobile no. •</label>
+            <input id="mobile" placeholder="e.g., 0400 000 000" required />
+          </div>
+        </details>
+      </div>
+
+      <p id="saveMsgTop" class="status" aria-live="polite"></p>
+    </aside>
+
+    <!-- RIGHT: Medical Information -->
+    <section class="medical card card--elevated">
+      <form id="patientForm" class="medical-form">
+        <!-- Labs / Vitals -->
+        <header class="section-head">
+          <h2>Labs & Vitals</h2>
+        </header>
+
+        <div class="grid g-4">
+          <div class="form-row unit">
+            <label for="fbs">FBS</label>
+            <input id="fbs" type="number" step="0.1" min="0" />
+            <span class="unit-tag">mg/dL</span>
+          </div>
+          <div class="form-row unit">
+            <label for="rbs">RBS</label>
+            <input id="rbs" type="number" step="0.1" min="0" />
+            <span class="unit-tag">mg/dL</span>
+          </div>
+          <div class="form-row unit">
+            <label for="bMealSugar">B. meal Sugar</label>
+            <input id="bMealSugar" type="number" step="0.1" min="0" />
+            <span class="unit-tag">mg/dL</span>
+          </div>
+          <div class="form-row unit">
+            <label for="bChol">B. Cholesterol</label>
+            <input id="bChol" type="number" step="0.1" min="0" />
+            <span class="unit-tag">mg/dL</span>
+          </div>
+
+          <div class="form-row unit">
+            <label for="ldl">LDL</label>
+            <input id="ldl" type="number" step="0.1" min="0" />
+            <span class="unit-tag">mg/dL</span>
+          </div>
+          <div class="form-row unit">
+            <label for="tg">TG</label>
+            <input id="tg" type="number" step="0.1" min="0" />
+            <span class="unit-tag">mg/dL</span>
+          </div>
+          <div class="form-row unit">
+            <label for="hdl">HDL</label>
+            <input id="hdl" type="number" step="0.1" min="0" />
+            <span class="unit-tag">mg/dL</span>
+          </div>
+          <div class="form-row">
+            <label for="bp">B.P</label>
+            <input id="bp" placeholder="e.g., 120/80" />
+          </div>
+
+          <div class="form-row unit">
+            <label for="sCreat">S. Creatinine</label>
+            <input id="sCreat" type="number" step="0.01" min="0" />
+            <span class="unit-tag">mg/dL</span>
+          </div>
+          <div class="form-row unit">
+            <label for="sUric">S. Uric Acid</label>
+            <input id="sUric" type="number" step="0.1" min="0" />
+            <span class="unit-tag">mg/dL</span>
+          </div>
+          <div class="form-row unit">
+            <label for="bmi">BMI</label>
+            <input id="bmi" type="number" step="0.1" min="0" />
+            <span class="unit-tag">kg/m²</span>
+          </div>
+          <div class="form-row unit">
+            <label for="spo2">SpO₂</label>
+            <input id="spo2" type="number" step="1" min="0" max="100" />
+            <span class="unit-tag">%</span>
+          </div>
+
+          <div class="form-row unit">
+            <label for="pulse">Pulse</label>
+            <input id="pulse" type="number" step="1" min="0" />
+            <span class="unit-tag">bpm</span>
+          </div>
+          <div class="form-row unit">
+            <label for="weight">Weight</label>
+            <input id="weight" type="number" step="0.1" min="0" />
+            <span class="unit-tag">kg</span>
+          </div>
+          <div class="form-row unit">
+            <label for="temp">Temp</label>
+            <input id="temp" type="text" placeholder="e.g., 37°C" />
+            <span class="unit-tag">°C</span>
+          </div>
+        </div>
+
+        <!-- History -->
+        <header class="section-head">
+          <h2>History</h2>
+        </header>
+
+        <div class="grid g-3">
+          <div class="history">
+            <label>H/O DM</label>
+            <div class="chips">
+              <input id="dmAbove" type="number" min="0" placeholder="Value" />
+              <select id="dmUnit">
+                <option>Days</option><option>Months</option><option>Years</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="history">
+            <label>H/O BP</label>
+            <div class="chips">
+              <input id="bpAbove" type="number" min="0" placeholder="Value" />
+              <select id="bpUnit">
+                <option>Days</option><option>Months</option><option>Years</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="history">
+            <label>K/C of Depression / Fits</label>
+            <div class="chips">
+              <input id="psychAbove" type="number" min="0" placeholder="Value" />
+              <select id="psychUnit">
+                <option>Days</option><option>Months</option><option>Years</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="history">
+            <label>Psychosis</label>
+            <div class="chips">
+              <input id="psychosisAbove" type="number" min="0" placeholder="Value" />
+              <select id="psychosisUnit">
+                <option>Days</option><option>Months</option><option>Years</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="history">
+            <label>K/C of CKD</label>
+            <div class="chips">
+              <input id="ckdAbove" type="number" min="0" placeholder="Value" />
+              <select id="ckdUnit">
+                <option>Days</option><option>Months</option><option>Years</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="history">
+            <label>Diabetic Foot</label>
+            <div class="chips">
+              <input id="dfAbove" type="number" min="0" placeholder="Value" />
+              <select id="dfUnit">
+                <option>Days</option><option>Months</option><option>Years</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid g-2">
+          <div class="form-row">
+            <label for="others">Others •</label>
+            <input id="others" placeholder="Other conditions" />
+          </div>
+          <div class="form-row">
+            <label>Smoking</label>
+            <div class="radio-row">
+              <label><input type="radio" name="smoke" value="Smoker"> Smoker</label>
+              <label><input type="radio" name="smoke" value="Non smoker" checked> Non smoker</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Complaints / Drugs -->
+        <header class="section-head">
+          <h2>Complaints & Drugs</h2>
+        </header>
+
+        <div class="grid g-1">
+          <div class="form-row">
+            <label for="presentComplaint">Present complaint</label>
+            <textarea id="presentComplaint" rows="3" placeholder="Describe current complaint"></textarea>
+          </div>
+          <div class="form-row">
+            <label for="pastComplaint">Past complaints</label>
+            <textarea id="pastComplaint" rows="3" placeholder="Any past complaints"></textarea>
+          </div>
+          <div class="form-row">
+            <label for="hoDrugs">H/O taken Drugs</label>
+            <textarea id="hoDrugs" rows="3" placeholder="List previous drugs / duration"></textarea>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn-success" type="submit">Save Patient</button>
+          <button class="btn btn-ghost" type="reset">Reset</button>
+          <button type="button" id="printPrescription" class="btn btn-outline">Print Prescription</button>
+        </div>
+
+        <p id="saveMsg" class="status" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+
+  <footer class="site-foot">
+    <small>© <span id="year"></span> Tulsi Care Clinic. All rights reserved.</small>
+  </footer>
+
+  <!-- Load the patient form controller from the parent js folder -->
+  <script src="../js/patient_form.js"></script>
+
+  <!-- Minimal print handler moved to patient_form.js; the inline version has been removed to avoid duplication -->
+
+  <!-- Simple auth guard: redirect unauthenticated users to the root login -->
+  <script>
+    if (sessionStorage.getItem('auth') !== 'true') {
+      window.location.replace('../index.html');
+    }
+  </script>
+</body>
+</html>

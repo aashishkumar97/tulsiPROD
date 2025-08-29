@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Receipt – Tulsi Sugar Care Clinic</title>
+
+  <!-- Your existing thermal styles -->
+  <!-- Pull the receipt template stylesheet from the shared css folder -->
+  <link rel="stylesheet" href="../css/template.css"/>
+
+  <!-- Small overrides to pin the signature/footer at the bottom -->
+  <style>
+  .roll {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+
+  /* Instead of margin-top:auto (which pushes to endless paper), 
+     lock footer near bottom but with safe spacing */
+  .foot .sigline {
+    width: 35mm;
+    border-top: 0.4mm solid #111;
+    margin: 2mm auto 3mm auto; /* centered, with spacing */
+  }
+
+  .foot {
+    margin-top: 12mm;     /* space after totals */
+    text-align: center;
+  }
+
+  .foot .sigbox {
+    margin: 8mm auto 6mm auto;   /* big enough for signature space */
+    width: 60mm;                 /* adjust for printer width (58–80mm roll) */
+    border-top: 0.5mm solid #000;
+    padding-top: 2mm;
+    font-size: 0.85rem;
+    color: #444;
+  }
+
+  .foot .clinic {
+    font-weight: 700;
+    font-size: 1rem;       /* bigger font for clinic name */
+    margin-top: 6mm;
+  }
+
+  .foot .addr {
+    font-size: 0.8rem;     /* smaller font for address */
+    color: #555;           /* lighter color */
+    line-height: 1.2;
+  }
+
+  /* Amount-in-words styling (small, just beneath amount) */
+  .inwords {
+    margin-top: 0.6mm;
+    font-size: 0.8rem;
+    color: #333;
+    line-height: 1.2;
+  }
+  .inwords .label {
+    opacity: 0.8;
+  }
+  </style>
+</head>
+<body>
+  <main class="roll">
+    <!-- Logo -->
+    <header class="head">
+      <img id="logo" src="../images/logo.png" alt="Clinic Logo"/>
+    </header>
+
+    <!-- Invoice meta -->
+    <section class="meta">
+      <div class="row">
+        <span class="title">Invoice No:</span>
+        <span id="metaNo" class="val"></span>
+      </div>
+      <div class="row">
+        <span class="title">Date:</span>
+        <span id="metaDate" class="val"></span>
+      </div>
+      <div class="row"><span class="title">Received from with Thanks</span></div>
+      <div class="row">
+        <span id="metaName" class="val underline"></span>
+      </div>
+
+      <!-- Doctor line: displays the doctor name on the receipt.  We mirror the
+           structure used for the patient ("Received from") line by splitting
+           the label and value into separate rows. This ensures proper
+           alignment in the receipt printout. -->
+      <div class="row"><span class="title">For:</span></div>
+      <div class="row">
+        <span id="metaDoctor" class="val underline"></span>
+      </div>
+    </section>
+
+    <!-- Items -->
+    <section class="items" style="margin-top:2mm">
+      <div class="title">On Account of:</div>
+      <ul id="itemsList" style="list-style:none; padding:0; margin:0"></ul>
+    </section>
+
+    <!-- Totals -->
+    <section class="totals" style="margin-top:2mm">
+      <div class="row" style="display:flex; justify-content:space-between; font-weight:700; margin:0.8mm 0;">
+        <span>Sum of Rs</span>
+        <span id="sumRs"></span>
+      </div>
+      <div class="row" style="display:flex; justify-content:space-between; font-weight:700; margin:0.8mm 0;">
+        <span>Rs</span>
+        <div style="text-align:right">
+          <div id="rsBottom"></div>
+          <div id="sumWords" class="inwords"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Signature + footer sticks to bottom -->
+    <section class="foot">
+      <div class="sigline"></div>
+      <div class="clinic" style="font-weight:700">Tulsi Sugar Care Clinic</div>
+      <div class="addr">Near Agha Khan Laboratory VIP Road Larkana</div>
+    </section>
+  </main>
+
+  <script>
+    // Format today's date as local yyyy-mm-dd (to match <input type="date">)
+    function todayISOLocal(){
+      const d=new Date(), off=d.getTimezoneOffset()*60000;
+      return new Date(d.getTime()-off).toISOString().slice(0,10);
+    }
+    // Human readable (for the printout)
+    function prettyDate(iso){
+      try{
+        const [y,m,d]=iso.split('-').map(Number);
+        return new Date(y,m-1,d).toLocaleDateString();
+      }catch{ return new Date().toLocaleDateString(); }
+    }
+
+    // --- Amount to words (Indian numbering: thousand, lakh, crore) ---
+    function numberToWordsINR(num){
+      num = Math.floor(Number(num) || 0);
+      if (num === 0) return 'Zero RS';
+
+      const below20 = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten',
+        'Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+      const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+
+      function twoDigits(n){
+        if (n < 20) return below20[n];
+        const t = Math.floor(n/10), r = n%10;
+        return tens[t] + (r ? ' ' + below20[r] : '');
+      }
+      function threeDigits(n){
+        const h = Math.floor(n/100), r = n%100;
+        return (h ? below20[h] + ' Hundred' + (r ? ' ' : '') : '') + (r ? twoDigits(r) : '');
+      }
+
+      // Split Indian groups: crore, lakh, thousand, hundred+remainder
+      const crore   = Math.floor(num / 10000000); num %= 10000000;
+      const lakh    = Math.floor(num / 100000);   num %= 100000;
+      const thousand= Math.floor(num / 1000);     num %= 1000;
+      const rest    = num;
+
+      const parts = [];
+      if (crore)    parts.push(threeDigits(crore)   + ' Crore');
+      if (lakh)     parts.push(threeDigits(lakh)    + ' Lakh');
+      if (thousand) parts.push(threeDigits(thousand)+ ' Thousand');
+      if (rest)     parts.push(threeDigits(rest));
+
+      return parts.join(' ') + ' Rs';
+    }
+
+    const data = JSON.parse(localStorage.getItem('RECEIPT_DATA') || '{}');
+
+    // Meta
+    document.getElementById('metaNo').textContent   = data.invoiceNo || '';
+    const dateIso = data.date || todayISOLocal();
+    document.getElementById('metaDate').textContent = prettyDate(dateIso);
+    // "Received from" is usually the patient/payer. Fall back to empty string.
+    document.getElementById('metaName').textContent = data.received || data.patientName || '';
+
+    // Doctor name printed under "For:". Uses doctorName from payload or empty.
+    const docEl = document.getElementById('metaDoctor');
+    if (docEl) {
+      docEl.textContent = data.doctorName || '';
+    }
+
+    // Items
+    const list = document.getElementById('itemsList');
+    if (Array.isArray(data.items) && data.items.length){
+      data.items.forEach(it=>{
+        const li=document.createElement('li');
+        li.textContent = `• ${it.label} - Rs ${Number(it.amt||0).toFixed(2)}`;
+        li.style.margin = '0.6mm 0';
+        list.appendChild(li);
+      });
+    }else{
+      const li=document.createElement('li'); li.textContent='• —'; list.appendChild(li);
+    }
+
+    // Totals
+    const sum=(data.items||[]).reduce((s,r)=>s+(Number(r.amt)||0),0);
+const bottom=(data.rsBottom!==undefined && data.rsBottom!==null && data.rsBottom!=='')
+  ? Number(data.rsBottom):sum;
+
+document.getElementById('sumRs').textContent   = sum.toFixed(2);
+document.getElementById('rsBottom').textContent= bottom.toFixed(2);
+
+// Amount in words (right beneath Rs amount)
+document.getElementById('sumWords').textContent = numberToWordsINR(Math.round(bottom));
+
+    // Auto-print on open
+    window.onload = () => window.print();
+  </script>
+</body>
+</html>

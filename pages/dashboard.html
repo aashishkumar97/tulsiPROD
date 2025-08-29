@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tulsi Care Clinic – Doctor Dashboard</title>
+  <!-- Pull the shared stylesheet from the parent css folder -->
+  <link rel="stylesheet" href="../css/style.css" />
+  <!-- Chart.js for graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="app-body">
+  <!-- Top header -->
+  <header id="app-header" class="app-header">
+    <div class="brand">
+      <div class="logo" aria-hidden="true"></div>
+      <div class="brand-text">
+        <h1>Tulsi Care Clinic</h1>
+        <p>Welcome Dr. Pawan Kumar</p>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="quick-icons" aria-hidden="true">
+        <span class="qicon bell"></span>
+        <span class="qicon inbox"></span>
+        <span class="qicon cart"></span>
+      </div>
+      <div class="user-chip">
+        <span id="whoami">Doctor</span>
+        <button id="logoutBtn" class="btn btn-outline">Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar card card--elevated">
+      <nav class="side-nav">
+        <h3 class="side-title">Main</h3>
+
+        <!-- CHANGED: button -> link to patient_form.html -->
+        <a href="patient_form.html" id="navCreate" class="side-item active">
+          <span class="sicon plus"></span>
+          Create New Patient
+        </a>
+
+        <button id="navSearch" class="side-item">
+          <span class="sicon search"></span>
+          Search Existing Patient
+        </button>
+<a href="invoice.html" id="navInvoice" class="side-item">
+  <span class="sicon bill"></span>
+  Generate Invoice
+</a>
+      </nav>
+
+      <footer class="side-foot">
+        <small>© <span id="year"></span> Tulsi Care Clinic</small>
+      </footer>
+    </aside>
+
+    <!-- Content -->
+    <section class="content">
+      <!-- Info cards row -->
+      <div class="cards-row">
+        <article class="stat-card card card--elevated">
+          <div class="stat-top">
+            <div class="stat-icon heart" aria-hidden="true"></div>
+            <span class="stat-label">Patients Today</span>
+          </div>
+          <div class="stat-value" id="statToday">0</div>
+          <div class="stat-sub">Since 12:00 AM</div>
+        </article>
+
+        <article class="stat-card card card--elevated">
+          <div class="stat-top">
+            <div class="stat-icon people" aria-hidden="true"></div>
+            <span class="stat-label">Total Patients</span>
+          </div>
+          <div class="stat-value" id="statTotal">0</div>
+          <div class="stat-sub">Recorded in system</div>
+        </article>
+
+        <article class="stat-card card card--elevated">
+          <div class="stat-top">
+            <div class="stat-icon money" aria-hidden="true"></div>
+            <span class="stat-label">Invoices (Demo)</span>
+          </div>
+          <div class="stat-value" id="statRevenue">$0</div>
+          <div class="stat-sub">This month</div>
+        </article>
+      </div>
+
+      <!-- Charts -->
+      <div class="grid-2">
+        <section class="card card--elevated">
+          <header class="section-head">
+            <h3>Patient Trends</h3>
+            <span class="muted small">Daily (last 7 days)</span>
+          </header>
+          <canvas id="chartPatients" height="200"></canvas>
+        </section>
+
+        <section class="card card--elevated">
+          <header class="section-head">
+            <h3>Case Mix (Demo)</h3>
+            <span class="muted small">Distribution</span>
+          </header>
+          <canvas id="chartMix" height="200"></canvas>
+        </section>
+      </div>
+
+      <!-- REMOVED: panelCreate (we now use patient_form.html) -->
+
+      <section id="panelSearch" class="workpanel card card--elevated hidden">
+        <header class="section-head">
+          <h3>Search Existing Patient</h3>
+        </header>
+        <p class="muted">Search UI coming next. For now, saved patients are used for stats.</p>
+      </section>
+
+      <section id="panelInvoice" class="workpanel card card--elevated hidden">
+        <header class="section-head">
+          <h3>Generate Invoice</h3>
+        </header>
+        <p class="muted">Invoice builder coming soon. (We’ll plug into Python later.)</p>
+      </section>
+    </section>
+  </main>
+
+  <!-- Load the dashboard controller from the parent js folder -->
+  <script src="../js/dashboard.js"></script>
+</body>
+</html>

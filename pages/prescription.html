@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Prescription – Print</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* A4 page with zero margins for print */
+  @page { size: A4; margin: 0; }
+  html, body { height: 100%; }
+  body { margin: 0; background: #f5f7fb; }
+
+  .sheet {
+    position: relative;
+    width: 210mm; height: 297mm;   /* A4 */
+    margin: 0 auto;
+    background: #fff;
+    overflow: hidden;
+
+    /* ensure browser prints colors/images as-is */
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Background image layer (prints reliably) */
+  .bg {
+    position: absolute;
+    inset: 0;
+    width: 210mm; height: 297mm;
+    object-fit: cover;   /* adjust if your PNG has margins; try 'contain' if needed */
+    z-index: 0;
+  }
+
+  .field {
+    position: absolute;
+    font-family: Helvetica, Arial, sans-serif;
+    color: #000;
+    white-space: pre-wrap;
+    line-height: 1.2;
+    z-index: 1;           /* on top of the background */
+    pointer-events: none; /* avoid selecting while printing */
+  }
+
+  /* ====== POSITIONS (in mm) — tweak here to align ====== */
+  /*.refNo   { top: 10mm; left: 160mm; font-size: 10pt; font-weight: 700; } */
+  .date    { top: 50.2mm; left: 170mm; font-size: 10pt; }
+  .name {
+  left: 25.5mm;
+  top: 50.2mm;
+  font-size: 12pt;
+  font-weight: 700;
+}
+  .age     { top: 50.2mm; left: 150mm; font-size: 12pt; }
+
+
+  /* Vitals and labs positions (in mm) */
+  /* Display only the desired vitals/labs fields */
+  .bp          { top: 120mm; left: 38mm;  font-size: 10pt; }
+  .spo2        { top: 175mm; left: 38mm;  font-size: 11pt; }
+
+  /* Labs */
+  .fbs         { top: 70mm;  left: 38mm; font-size: 10pt; }
+  .rbs         { top: 80mm;  left: 38mm; font-size: 10pt; }
+  .bMealSugar  { top: 90mm;  left: 42mm; font-size: 10pt; }
+  .bChol       { top: 100mm; left: 40mm; font-size: 10pt; }
+  .tg          { top: 110mm; left: 38mm; font-size: 10pt; }
+  .sCreat      { top: 132.5mm; left: 38mm; font-size: 10pt; }
+  .sUric       { top: 142.5mm; left: 42mm; font-size: 10pt; }
+  .weight      { top: 155mm; left: 38mm; font-size: 10pt; }
+  .bmi         { top: 165mm; left: 38mm; font-size: 10pt; }
+
+  /* Multi-line blocks */
+  .presentComplaint { top: 90mm; left: 80mm;  width: 160mm; font-size: 12pt; }
+  .pastComplaint    { top: 150mm; left: 80mm;  width: 160mm; font-size: 12pt; }
+  .hoDrugs          { top: 130mm; left: 80mm;  width: 160mm; font-size: 12pt; }
+
+  @media print {
+    body { background: #fff; }
+  }
+</style>
+</head>
+<body>
+  <div class="sheet" aria-label="Prescription sheet">
+    <!-- Background image prints reliably -->
+    <img class="bg" src="../images/prescription.png" alt="Prescription template">
+
+    <!-- Overlay fields -->
+    <!-- Only keep the selected fields -->
+    <div class="field date"   id="p_date"></div>
+    <div class="field name"   id="p_name"></div>
+    <div class="field age"    id="p_age"></div>
+
+    <div class="field bp"      id="p_bp"></div>
+    <div class="field spo2"    id="p_spo2"></div>
+
+    <div class="field fbs"        id="p_fbs"></div>
+    <div class="field rbs"        id="p_rbs"></div>
+    <div class="field bMealSugar" id="p_bMealSugar"></div>
+    <div class="field bChol"      id="p_bChol"></div>
+    <div class="field tg"         id="p_tg"></div>
+
+    <div class="field sCreat"     id="p_sCreat"></div>
+    <div class="field sUric"      id="p_sUric"></div>
+    <div class="field weight"     id="p_weight"></div>
+    <div class="field bmi"        id="p_bmi"></div>
+
+    <div class="field presentComplaint" id="p_presentComplaint"></div>
+    <div class="field pastComplaint"    id="p_pastComplaint"></div>
+    <div class="field hoDrugs"          id="p_hoDrugs"></div>
+  </div>
+
+<script>
+(function(){
+  const raw = sessionStorage.getItem('tcc_prescription');
+  if (!raw) { alert('No patient data found. Go back and click “Print Prescription” from the form.'); return; }
+  const d = JSON.parse(raw);
+
+  const todayIfEmpty = (iso) => {
+    if (!iso) return new Date().toLocaleDateString();
+    const dt = new Date(iso); return isNaN(dt) ? iso : dt.toLocaleDateString();
+  };
+  const set = (id, val) => document.getElementById(id).textContent = (val ?? '') || '';
+
+  // Only populate the selected fields
+  set('p_date',  todayIfEmpty(d.date));
+  set('p_name',  d.name);
+  set('p_age',   d.age);
+
+  set('p_bp',    d.bp);
+  set('p_spo2',  d.spo2);
+
+  set('p_fbs',        d.fbs);
+  set('p_rbs',        d.rbs);
+  set('p_bMealSugar', d.bMealSugar);
+  set('p_bChol',      d.bChol);
+  set('p_tg',         d.tg);
+
+  set('p_sCreat', d.sCreat);
+  set('p_sUric',  d.sUric);
+  set('p_weight', d.weight);
+  set('p_bmi',    d.bmi);
+
+  set('p_presentComplaint', d.presentComplaint);
+  // Prefix the past complaint and history of drugs text
+  set('p_pastComplaint',    d.pastComplaint ? `Past Complaint: ${d.pastComplaint}` : '');
+  set('p_hoDrugs',          d.hoDrugs ? `H/O taken drugs: ${d.hoDrugs}` : '');
+
+  // Wait a tick so the background image sizes correctly, then open print
+  window.onload = () => setTimeout(() => window.print(), 400);
+})();
+</script>
+</body>
+</html>

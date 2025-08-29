@@ -190,7 +190,7 @@
     // Wrap text
     const wordsWrapped = doc.splitTextToSize(sumWords, pdfWidth - 16);
     const address = 'Near Agha Khan Laboratory VIP Road Larkana';
-    const addrWrapped = doc.splitTextToSize(address, pdfWidth - 26);
+    const addrWrapped = doc.splitTextToSize(address);
 
     let y = 10; // generous top margin
 

@@ -4,8 +4,8 @@
 // generates sequential invoice numbers, saves invoices into Supabase
 // (if configured), and produces a thermal receipt as a PDF using jsPDF.
 // The receipt height is calculated dynamically based on its content,
-// ensuring the printout ends near the last line. Patient logic has
-// been removed – the payer defaults to the doctor’s name.
+// ensuring the printout ends near the last line. The payer field now
+// starts empty so the user's entry (e.g., patient name) is always used.
 
 (function () {
   // Grab form controls
@@ -63,7 +63,7 @@
   // Initialize meta and default payer on load
   function init() {
     ensureMeta();
-    receivedEl.value = doctorEl?.value || '';
+    receivedEl.value = '';
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
@@ -71,18 +71,13 @@
     init();
   }
 
-  // When the doctor name changes, mirror it into the "received from" field
-  doctorEl?.addEventListener('input', () => {
-    receivedEl.value = doctorEl.value || '';
-  });
-
   // On form reset: clear invoice number/date then regenerate and reset payer
   resetBtn?.addEventListener('click', () => {
     setTimeout(() => {
       invEl.value = '';
       dateEl.value = '';
       ensureMeta();
-      receivedEl.value = doctorEl?.value || '';
+      receivedEl.value = '';
     }, 0);
   });
 
@@ -102,10 +97,10 @@
     return items;
   }
 
-  // Convert a number to words using Indian numbering. Always appends "Rupees".
+  // Convert a number to words using Indian numbering. Always appends "Rupees Only".
   function numberToWordsINR(num) {
     num = Math.floor(Number(num) || 0);
-    if (num === 0) return 'Zero Rupees';
+    if (num === 0) return 'Zero Rupees Only';
     const below20 = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
       'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
@@ -133,7 +128,7 @@
     if (lakh)     parts.push(threeDigits(lakh)    + ' Lakh');
     if (thousand) parts.push(threeDigits(thousand)+ ' Thousand');
     if (rest)     parts.push(threeDigits(rest));
-    return parts.join(' ') + ' Rupees';
+    return parts.join(' ') + ' Rupees Only';
   }
 
   // Load the logo image referenced by a hidden field (#logoPath) into a DataURL.
@@ -232,13 +227,15 @@
     doc.text('Invoice No:', 5, y);
     doc.text(String(payload.invoiceNo || ''), 75, y, { align: 'right' });
     y += 4;
-    // Date
+    // Date with time (Larkana, Pakistan)
     doc.text('Date:', 5, y);
-    const dateStr = payload.date ? new Date(payload.date).toLocaleDateString() : new Date().toLocaleDateString();
+    const baseDate = payload.date ? new Date(payload.date + 'T00:00:00') : new Date();
+    const timeSrc  = payload.generatedAt ? new Date(payload.generatedAt) : new Date();
+    const dateStr = `${baseDate.toLocaleDateString('en-PK', { timeZone: 'Asia/Karachi' })} ${timeSrc.toLocaleTimeString('en-PK', { timeZone: 'Asia/Karachi', hour12: false })}`;
     doc.text(dateStr, 75, y, { align: 'right' });
     y += 4;
-    // Received from
-    doc.text('Received from with Thanks', 5, y);
+    // Received with thanks from
+    doc.text('Received with Thanks from:', 5, y);
     y += 3;
     doc.setFont('helvetica', 'bold');
     doc.text(String(payload.received || ''), 5, y);
@@ -272,13 +269,14 @@
     doc.text('Rupees', 5, y);
     doc.text(bottom.toFixed(2), 75, y, { align: 'right' });
     y += 4;
-    // Amount in words
-    doc.setFont('helvetica', 'normal');
+    // Amount in words (bold for visibility)
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(6.5);
     wordsWrapped.forEach(line => {
       doc.text(line, 75, y, { align: 'right' });
       y += 3;
     });
+    doc.setFont('helvetica', 'normal');
     // Spacing after words
     y += 2;
     // Signature line
@@ -323,16 +321,18 @@
    * @param {boolean} autoPrint
    */
   async function openReceipt(autoPrint = false) {
-    const items  = collectItems();
-    const doctor = doctorEl?.value?.trim() || '';
-    const rsVal  = rsBottomEl?.value;
+    const items      = collectItems();
+    const doctor     = doctorEl?.value?.trim() || '';
+    const rsVal      = rsBottomEl?.value;
+    const generatedAt = new Date().toISOString();
     const payload = {
-      invoiceNo: invEl.value,
-      date     : dateEl.value || todayISOLocal(),
-      received : receivedEl.value || doctor || '',
+      invoiceNo : invEl.value,
+      date      : dateEl.value || todayISOLocal(),
+      generatedAt,
+      received  : receivedEl.value.trim(),
       doctorName: doctor || null,
-      items    : items,
-      rsBottom : (rsVal !== undefined && rsVal !== null && rsVal !== '') ? Number(rsVal) : undefined,
+      items     : items,
+      rsBottom  : (rsVal !== undefined && rsVal !== null && rsVal !== '') ? Number(rsVal) : undefined,
     };
     // Save to localStorage so a different page could access it if needed
     localStorage.setItem('RECEIPT_DATA', JSON.stringify(payload));

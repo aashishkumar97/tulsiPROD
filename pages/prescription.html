@@ -141,9 +141,9 @@
   set('p_bmi',    d.bmi);
 
   set('p_presentComplaint', d.presentComplaint);
-  // Prefix the past complaint and history of drugs text
-  set('p_pastComplaint',    d.pastComplaint ? `Past Complaint: ${d.pastComplaint}` : '');
-  set('p_hoDrugs',          d.hoDrugs ? `H/O taken drugs: ${d.hoDrugs}` : '');
+  // Prefix the past history and history of drugs text when provided
+  set('p_pastComplaint',    d.pastComplaint && d.pastComplaint.trim() ? `Past History: ${d.pastComplaint}` : '');
+  set('p_hoDrugs',          d.hoDrugs && d.hoDrugs.trim() ? `H/O taken drugs: ${d.hoDrugs}` : '');
 
   // Wait a tick so the background image sizes correctly, then open print
   window.onload = () => setTimeout(() => window.print(), 400);

@@ -3,9 +3,9 @@
 // This script powers the invoice form for Tulsi Sugar Care Clinic. It
 // generates sequential invoice numbers, saves invoices into Supabase
 // (if configured), and produces a thermal receipt as a PDF using jsPDF.
-// The receipt height is calculated dynamically based on its content,
-// ensuring the printout ends near the last line. Patient logic has
-// been removed – the payer defaults to the doctor’s name.
+// The receipt now uses a fixed 3×5″ layout; lines are spaced to fill the
+// page gracefully. The payer field starts empty so the user's entry (e.g.,
+// patient name) is always used.
 
 (function () {
   // Grab form controls
@@ -63,7 +63,7 @@
   // Initialize meta and default payer on load
   function init() {
     ensureMeta();
-    receivedEl.value = doctorEl?.value || '';
+    receivedEl.value = '';
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
@@ -71,18 +71,13 @@
     init();
   }
 
-  // When the doctor name changes, mirror it into the "received from" field
-  doctorEl?.addEventListener('input', () => {
-    receivedEl.value = doctorEl.value || '';
-  });
-
   // On form reset: clear invoice number/date then regenerate and reset payer
   resetBtn?.addEventListener('click', () => {
     setTimeout(() => {
       invEl.value = '';
       dateEl.value = '';
       ensureMeta();
-      receivedEl.value = doctorEl?.value || '';
+      receivedEl.value = '';
     }, 0);
   });
 
@@ -102,10 +97,10 @@
     return items;
   }
 
-  // Convert a number to words using Indian numbering. Always appends "Rupees".
+  // Convert a number to words using Indian numbering. Always appends "Rupees Only".
   function numberToWordsINR(num) {
     num = Math.floor(Number(num) || 0);
-    if (num === 0) return 'Zero Rupees';
+    if (num === 0) return 'Zero Rupees Only';
     const below20 = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
       'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
@@ -133,7 +128,7 @@
     if (lakh)     parts.push(threeDigits(lakh)    + ' Lakh');
     if (thousand) parts.push(threeDigits(thousand)+ ' Thousand');
     if (rest)     parts.push(threeDigits(rest));
-    return parts.join(' ') + ' Rupees';
+    return parts.join(' ') + ' Rupees Only';
   }
 
   // Load the logo image referenced by a hidden field (#logoPath) into a DataURL.
@@ -156,9 +151,9 @@
   }
 
   /**
-   * Create a receipt PDF sized dynamically based on its content. The width is fixed
-   * at 80mm and the height grows depending on the text printed. The "For" line
-   * has been removed; only the payer line appears. Optionally auto‑print.
+   * Create a 3×5 inch (approximately 76×127 mm) receipt PDF. The size is fixed
+   * so it no longer changes with content. Lines are spaced out and all text is
+   * bold for better legibility. Optionally auto‑print.
    *
    * @param {Object} payload Invoice data
    * @param {boolean} autoPrint If true, opens the print dialog automatically
@@ -176,79 +171,53 @@
       ? Number(payload.rsBottom)
       : sum;
     const sumWords = numberToWordsINR(Math.round(bottom));
-    // Use a temporary doc to wrap long text. This gives us line counts for words and address.
-    const tmpDoc   = new jsPDF({ unit: 'mm', format: [80, 200], orientation: 'portrait' });
-    const wordsWrapped = tmpDoc.splitTextToSize(sumWords, 60);
+
+    // Fixed document dimensions: 3in × 5in
+    const pdfWidth = 76.2;
+    const pdfHeight = 127;
+    const doc = new jsPDF({ unit: 'mm', format: [pdfWidth, pdfHeight], orientation: 'portrait' });
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+
+    // Wrap text
+    const wordsWrapped = doc.splitTextToSize(sumWords, pdfWidth - 16);
     const address = 'Near Agha Khan Laboratory VIP Road Larkana';
-    const addrWrapped  = tmpDoc.splitTextToSize(address, 50);
-    // Calculate the final height of the PDF. Start at 5mm top margin.
-    let h = 5;
-    // Logo height plus spacing
-    const logoWidth = 46;
-    const logoHeight = 12;
+    const addrWrapped = doc.splitTextToSize(address, pdfWidth - 26);
+
+    let y = 10; // generous top margin
+
+    // Logo with ample room
     if (logoData) {
-      h += logoHeight + 3;
-    }
-    // Meta rows: invoice number and date
-    h += 4; // Invoice No row
-    h += 4; // Date row
-    // "Received from with Thanks" row: label line and bold payer line
-    h += 3; // label spacing
-    h += 4; // payer name line
-    // Items header
-    h += 4;
-    // Items list: at least one line; each line 3.5mm
-    const itemCount = (payload.items && payload.items.length) ? payload.items.length : 1;
-    h += itemCount * 3.5;
-    // Spacing before totals
-    h += 2;
-    // Totals lines: sum line and rupees line
-    h += 4;
-    h += 4;
-    // Words lines: each line 3mm
-    h += wordsWrapped.length * 3;
-    // Spacing after words
-    h += 2;
-    // Signature line spacing
-    h += 4;
-    // Clinic name
-    h += 3.5;
-    // Address lines: each 3mm
-    h += addrWrapped.length * 3;
-    // Add a bottom margin to prevent clipping
-    const finalHeight = Math.max(h + 3, 80);
-    // Now create the real PDF with calculated height
-    const doc = new jsPDF({ unit: 'mm', format: [80, finalHeight], orientation: 'portrait' });
-    let y = 5;
-    // Draw logo if available
-    if (logoData) {
-      const xLogo = (80 - logoWidth) / 2;
+      const logoWidth = 30;
+      const logoHeight = 20;
+      const xLogo = (pdfWidth - logoWidth) / 2;
       doc.addImage(logoData, 'PNG', xLogo, y, logoWidth, logoHeight);
-      y += logoHeight + 3;
+      y += logoHeight + 8;
     }
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
+
     // Invoice number
     doc.text('Invoice No:', 5, y);
-    doc.text(String(payload.invoiceNo || ''), 75, y, { align: 'right' });
-    y += 4;
-    // Date
+    doc.text(String(payload.invoiceNo || ''), pdfWidth - 5, y, { align: 'right' });
+    y += 6;
+
+    // Date with time (Larkana, Pakistan)
     doc.text('Date:', 5, y);
-    const dateStr = payload.date ? new Date(payload.date).toLocaleDateString() : new Date().toLocaleDateString();
-    doc.text(dateStr, 75, y, { align: 'right' });
-    y += 4;
-    // Received from
-    doc.text('Received from with Thanks', 5, y);
-    y += 3;
-    doc.setFont('helvetica', 'bold');
+    const baseDate = payload.date ? new Date(payload.date + 'T00:00:00') : new Date();
+    const timeSrc  = payload.generatedAt ? new Date(payload.generatedAt) : new Date();
+    const dateStr = `${baseDate.toLocaleDateString('en-PK', { timeZone: 'Asia/Karachi' })} ${timeSrc.toLocaleTimeString('en-PK', { timeZone: 'Asia/Karachi', hour12: false })}`;
+    doc.text(dateStr, pdfWidth - 5, y, { align: 'right' });
+    y += 6;
+
+    // Payer
+    doc.text('Received with Thanks from:', 5, y);
+    y += 6;
     doc.text(String(payload.received || ''), 5, y);
-    doc.setFont('helvetica', 'normal');
-    y += 4;
+    y += 8;
+
     // Items header
-    doc.setFont('helvetica', 'bold');
     doc.text('On Account of:', 5, y);
-    doc.setFont('helvetica', 'normal');
-    y += 4;
+    y += 6;
+
     // Items list
     if (payload.items && payload.items.length) {
       payload.items.forEach(item => {
@@ -256,49 +225,49 @@
         const amt   = Number(item.amt) || 0;
         const line  = '\u2022 ' + label + ' - Rs ' + amt.toFixed(2);
         doc.text(line, 5, y);
-        y += 3.5;
+        y += 6;
       });
     } else {
       doc.text('\u2022 —', 5, y);
-      y += 3.5;
+      y += 6;
     }
-    // Spacing before totals
-    y += 2;
+
     // Totals
-    doc.setFont('helvetica', 'bold');
+    y += 4;
     doc.text('Sum of Rs', 5, y);
-    doc.text(sum.toFixed(2), 75, y, { align: 'right' });
-    y += 4;
+    doc.text(sum.toFixed(2), pdfWidth - 5, y, { align: 'right' });
+    y += 6;
     doc.text('Rupees', 5, y);
-    doc.text(bottom.toFixed(2), 75, y, { align: 'right' });
-    y += 4;
+    doc.text(bottom.toFixed(2), pdfWidth - 5, y, { align: 'right' });
+    y += 6;
+
     // Amount in words
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.5);
+    doc.setFontSize(8);
     wordsWrapped.forEach(line => {
-      doc.text(line, 75, y, { align: 'right' });
-      y += 3;
+      doc.text(line, pdfWidth - 5, y, { align: 'right' });
+      y += 5;
     });
-    // Spacing after words
-    y += 2;
+    doc.setFontSize(10);
+
     // Signature line
+    y += 6;
     const sigWidth = 32;
-    const sigX     = (80 - sigWidth) / 2;
+    const sigX = (pdfWidth - sigWidth) / 2;
     doc.setLineWidth(0.2);
     doc.line(sigX, y, sigX + sigWidth, y);
-    y += 4;
+    y += 8;
+
     // Clinic name
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.text('Tulsi Sugar Care Clinic', 40, y, { align: 'center' });
-    y += 3.5;
+    doc.text('Tulsi Sugar Care Clinic', pdfWidth / 2, y, { align: 'center' });
+    y += 6;
+
     // Address
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.5);
+    doc.setFontSize(8);
     addrWrapped.forEach(line => {
-      doc.text(line, 40, y, { align: 'center' });
-      y += 3;
+      doc.text(line, pdfWidth / 2, y, { align: 'center' });
+      y += 5;
     });
+
     // Output: print or save
     if (autoPrint) {
       if (typeof doc.autoPrint === 'function') {
@@ -306,7 +275,6 @@
       }
       const url = doc.output('bloburl');
       const win = window.open(url, '_blank');
-      // If autoPrint isn't available, trigger print when the PDF loads
       if (!doc.autoPrint) {
         win?.addEventListener('load', () => {
           win.print();
@@ -323,16 +291,18 @@
    * @param {boolean} autoPrint
    */
   async function openReceipt(autoPrint = false) {
-    const items  = collectItems();
-    const doctor = doctorEl?.value?.trim() || '';
-    const rsVal  = rsBottomEl?.value;
+    const items      = collectItems();
+    const doctor     = doctorEl?.value?.trim() || '';
+    const rsVal      = rsBottomEl?.value;
+    const generatedAt = new Date().toISOString();
     const payload = {
-      invoiceNo: invEl.value,
-      date     : dateEl.value || todayISOLocal(),
-      received : receivedEl.value || doctor || '',
+      invoiceNo : invEl.value,
+      date      : dateEl.value || todayISOLocal(),
+      generatedAt,
+      received  : receivedEl.value.trim(),
       doctorName: doctor || null,
-      items    : items,
-      rsBottom : (rsVal !== undefined && rsVal !== null && rsVal !== '') ? Number(rsVal) : undefined,
+      items     : items,
+      rsBottom  : (rsVal !== undefined && rsVal !== null && rsVal !== '') ? Number(rsVal) : undefined,
     };
     // Save to localStorage so a different page could access it if needed
     localStorage.setItem('RECEIPT_DATA', JSON.stringify(payload));

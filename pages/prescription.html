@@ -74,12 +74,32 @@
   .pastComplaint    { top: 150mm; left: 80mm;  width: 160mm; font-size: 12pt; }
   .hoDrugs          { top: 130mm; left: 80mm;  width: 160mm; font-size: 12pt; }
 
+  /* Controls for download/print actions */
+  .controls {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 100;
+  }
+  .controls button {
+    padding: 6px 12px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
   @media print {
     body { background: #fff; }
+    .controls { display: none; }
   }
 </style>
+<!-- jsPDF and html2canvas for PDF generation -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
+  <div class="controls no-print">
+    <button id="downloadPdf">Download PDF</button>
+  </div>
   <div class="sheet" aria-label="Prescription sheet">
     <!-- Background image prints reliably -->
     <img class="bg" src="../images/prescription.png" alt="Prescription template">
@@ -144,6 +164,24 @@
   // Prefix the past history and history of drugs text when provided
   set('p_pastComplaint',    d.pastComplaint && d.pastComplaint.trim() ? `Past History: ${d.pastComplaint}` : '');
   set('p_hoDrugs',          d.hoDrugs && d.hoDrugs.trim() ? `H/O taken drugs: ${d.hoDrugs}` : '');
+
+  // Download the prescription as a PDF matching the on-screen layout
+  const downloadBtn = document.getElementById('downloadPdf');
+  downloadBtn?.addEventListener('click', async () => {
+    try {
+      const sheet = document.querySelector('.sheet');
+      const canvas = await html2canvas(sheet, { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save('prescription.pdf');
+    } catch (err) {
+      console.error('PDF generation failed', err);
+    }
+  });
 
   // Wait a tick so the background image sizes correctly, then open print
   window.onload = () => setTimeout(() => window.print(), 400);

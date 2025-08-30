@@ -247,6 +247,8 @@
     const availableHeight = pdfHeight - reservedHeight - itemsStartY;
     const lineHeight = Math.max(5, Math.min(6, availableHeight / itemsCount));
     const itemFont = Math.max(5, Math.min(7, lineHeight * 0.8));
+    const lineHeight = Math.min(6, availableHeight / itemsCount);
+    const itemFont = Math.max(1, Math.min(7, lineHeight * 0.8));
     doc.setFontSize(itemFont);
     if (payload.items && payload.items.length) {
       payload.items.forEach(item => {
@@ -258,6 +260,8 @@
       });
     } else {
       doc.text('\u2022 —', pdfWidth / 2, y, { align: 'center' });
+
+      doc.text('\u2022 —', 5, y);
       y += lineHeight;
     }
 

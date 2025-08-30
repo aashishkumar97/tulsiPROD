@@ -2,16 +2,16 @@
 //
 // This script powers the invoice form for Tulsi Sugar Care Clinic. It
 // generates sequential invoice numbers, saves invoices into Supabase
-// (if configured), and renders a receipt using a small HTML template suitable
-// for thermal printers. The payer field starts empty so the user's entry
-// (e.g., patient name) is always used.
+// (if configured), and produces a thermal receipt as a PDF using jsPDF.
+// The receipt now uses a fixed 3×5″ layout; lines are spaced to fill the
+// page gracefully. The payer field starts empty so the user's entry (e.g.,
+// patient name) is always used.
 
 (function () {
   // Grab form controls
   const invEl       = document.getElementById('invoiceNo');
   const dateEl      = document.getElementById('invoiceDate');
   const receivedEl  = document.getElementById('receivedFrom');
-  const clinicEl    = document.getElementById('clinicName');
   const doctorEl    = document.getElementById('doctorName');
   const rsBottomEl  = document.getElementById('rsBottom');
   const printBtn    = document.getElementById('printPage');
@@ -131,66 +131,172 @@
     return parts.join(' ') + ' Rupees Only';
   }
 
-  // Load the logo image referenced by a hidden field (#logoPath). Instead of
-  // using fetch (which can fail when the app is opened directly from the
-  // filesystem), draw the image to a canvas and extract a DataURL. The natural
-  // dimensions are returned so the image can be scaled without distortion.
+  // Load the logo image referenced by a hidden field (#logoPath) into a DataURL
+  // and return its natural dimensions so it can be scaled without distortion.
   async function getLogoDataUrl() {
-    const logoPathInput = document.getElementById('logoPath');
-    const logoPath = logoPathInput?.value || '../images/logo.png';
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0);
-          const dataUrl = canvas.toDataURL('image/png');
-          resolve({ dataUrl, width: img.naturalWidth, height: img.naturalHeight });
-        } catch (err) {
-          console.warn('Unable to convert logo to DataURL', err);
-          resolve(null);
-        }
-      };
-      img.onerror = () => resolve(null);
-      img.src = logoPath;
-    });
+    try {
+      const logoPathInput = document.getElementById('logoPath');
+      const logoPath = logoPathInput?.value || '../images/logo.png';
+      const res = await fetch(logoPath);
+      const blob = await res.blob();
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result;
+          const img = new Image();
+          img.onload = () =>
+            resolve({ dataUrl, width: img.naturalWidth, height: img.naturalHeight });
+          img.onerror = () => resolve({ dataUrl, width: 0, height: 0 });
+          img.src = dataUrl;
+        };
+        reader.onerror = (e) => reject(e);
+        reader.readAsDataURL(blob);
+      });
+    } catch (err) {
+      console.warn('Unable to load logo for PDF', err);
+      return null;
+    }
   }
 
   /**
-   * Render the receipt using an HTML template and optionally trigger printing.
+   * Create a 3×5 inch (approximately 76×127 mm) receipt PDF. The size is fixed
+   * so it no longer changes with content. Lines are spaced out and all text is
+   * bold for better legibility. Optionally auto‑print.
+   *
    * @param {Object} payload Invoice data
-   * @param {boolean} autoPrint Whether to automatically open the print dialog
+   * @param {boolean} autoPrint If true, opens the print dialog automatically
    */
-  async function generateReceiptHtml(payload, autoPrint = false) {
+  async function generateReceiptPdf(payload, autoPrint = false) {
+    if (!window.jspdf) {
+      console.warn('jsPDF library not loaded; cannot generate PDF');
+      return;
+    }
+    const { jsPDF } = window.jspdf;
     const logoData = await getLogoDataUrl();
+    // Compute sums
     const sum = (payload.items || []).reduce((s, r) => s + (Number(r.amt) || 0), 0);
-    const css = `#invoice-POS{box-shadow:0 0 1in -0.25in rgba(0,0,0,.5);padding:2mm;margin:0 auto;width:44mm;background:#FFF;}\n` +
-      `#top,#mid,#bot{border-bottom:1px solid #EEE;}\n` +
-      `#top{min-height:100px;}#mid{min-height:80px;}#bot{min-height:50px;}\n` +
-      `.logo{height:60px;width:60px;background-size:60px 60px;margin:0 auto;}\n` +
-      `.info{text-align:center;}\n` +
-      `table{width:100%;border-collapse:collapse;}\n` +
-      `.tabletitle{font-size:.5em;background:#EEE;}\n` +
-      `.service{border-bottom:1px solid #EEE;}\n` +
-      `.item{width:24mm;}\n` +
-      `.itemtext{font-size:.5em;}\n` +
-      `#legalcopy{margin-top:5mm;text-align:center;font-size:.5em;}`;
+    const bottom = (payload.rsBottom !== undefined && payload.rsBottom !== null && payload.rsBottom !== '')
+      ? Number(payload.rsBottom)
+      : sum;
+    const sumWords = numberToWordsINR(Math.round(bottom));
 
-    const rows = (payload.items && payload.items.length)
-      ? payload.items.map(item => `\n<tr class="service">\n  <td class="tableitem"><p class="itemtext">${item.label}</p></td>\n  <td class="tableitem"><p class="itemtext">1</p></td>\n  <td class="tableitem"><p class="itemtext">${Number(item.amt).toFixed(2)}</p></td>\n</tr>`).join('')
-      : '\n<tr class="service"><td class="tableitem"><p class="itemtext">—</p></td><td class="tableitem"><p class="itemtext">0</p></td><td class="tableitem"><p class="itemtext">0.00</p></td></tr>';
+    // Fixed document dimensions: 3in × 5in
+    const pdfWidth = 76.2;
+    const pdfHeight = 127;
+    const doc = new jsPDF({ unit: 'mm', format: [pdfWidth, pdfHeight], orientation: 'portrait' });
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
 
-    const html = `<!DOCTYPE html>\n<html><head><meta charset="utf-8"/>\n<title>${payload.invoiceNo || ''}</title>\n<style>${css}\n.logo{background:url('${logoData?.dataUrl || ''}') no-repeat;}\n</style></head>\n<body>\n<div id="invoice-POS">\n  <center id="top">\n    <div class="logo"></div>\n    <div class="info"><h2>${payload.clinicName || ''}</h2></div>\n  </center>\n  <div id="mid">\n    <div class="info">\n      <h2>Receipt Info</h2>\n      <p>Invoice No: ${payload.invoiceNo || ''}<br/>Date: ${payload.date || ''}<br/>Received: ${payload.received || ''}<br/>Doctor: ${payload.doctorName || ''}</p>\n    </div>\n  </div>\n  <div id="bot">\n    <div id="table">\n      <table>\n        <tr class="tabletitle"><td class="item"><h2>Item</h2></td><td class="Hours"><h2>Qty</h2></td><td class="Rate"><h2>Sub Total</h2></td></tr>${rows}\n        <tr class="tabletitle"><td></td><td class="Rate"><h2>Total</h2></td><td class="payment"><h2>${sum.toFixed(2)}</h2></td></tr>\n      </table>\n    </div>\n    <div id="legalcopy"><p class="legal"><strong>Thank you for your business!</strong></p></div>\n  </div>\n</div>\n</body></html>`;
+    // Wrap text
+    const wordsWrapped = doc.splitTextToSize(sumWords, pdfWidth - 16);
+    const address = 'Near Agha Khan Laboratory VIP Road Larkana';
+    const addrWrapped = doc.splitTextToSize(address);
 
-    const win = window.open('', '_blank');
-    win.document.write(html);
-    win.document.close();
+    let y = 10; // generous top margin
+
+    // Logo with ample room (maintain aspect ratio)
+    if (logoData?.dataUrl) {
+      const logoMaxWidth = 35;  // mm
+      const logoMaxHeight = 20; // mm
+      let logoWidth = logoMaxWidth;
+      let logoHeight = logoWidth * (logoData.height ? logoData.height / logoData.width : 1);
+      if (logoHeight > logoMaxHeight) {
+        logoHeight = logoMaxHeight;
+        logoWidth = logoHeight * (logoData.width ? logoData.width / logoData.height : 1);
+      }
+      const xLogo = (pdfWidth - logoWidth) / 2;
+      doc.addImage(logoData.dataUrl, 'PNG', xLogo, y, logoWidth, logoHeight);
+      y += logoHeight + 8;
+    }
+
+    // Invoice number
+    doc.text('Invoice No:', 5, y);
+    doc.text(String(payload.invoiceNo || ''), pdfWidth - 5, y, { align: 'right' });
+    y += 6;
+
+    // Date with time (Larkana, Pakistan)
+    doc.text('Date:', 5, y);
+    const baseDate = payload.date ? new Date(payload.date + 'T00:00:00') : new Date();
+    const timeSrc  = payload.generatedAt ? new Date(payload.generatedAt) : new Date();
+    const dateStr = `${baseDate.toLocaleDateString('en-PK', { timeZone: 'Asia/Karachi' })} ${timeSrc.toLocaleTimeString('en-PK', { timeZone: 'Asia/Karachi', hour12: false })}`;
+    doc.text(dateStr, pdfWidth - 5, y, { align: 'right' });
+    y += 6;
+
+    // Payer
+    doc.text('Received with Thanks from:', 5, y);
+    y += 6;
+    doc.text(String(payload.received || ''), 5, y);
+    y += 8;
+
+    // Items header
+    doc.text('On Account of:', 5, y);
+    y += 6;
+
+    // Items list
+    doc.setFontSize(7)
+    if (payload.items && payload.items.length) {
+      payload.items.forEach(item => {
+        const label = item.label || '—';
+        const amt   = Number(item.amt) || 0;
+        const line  = '\u2022 ' + label + ' - Rs ' + amt.toFixed(2);
+        doc.text(line, 5, y);
+        y += 6;
+      });
+    } else {
+      doc.text('\u2022 —', 5, y);
+      y += 6;
+    }
+
+    // Totals
+    y += 4;
+    doc.text('Sum of Rs', 5, y);
+    doc.text(sum.toFixed(2), pdfWidth - 5, y, { align: 'right' });
+    y += 6;
+    doc.text('Rupees', 5, y);
+    doc.text(bottom.toFixed(2), pdfWidth - 5, y, { align: 'right' });
+    y += 6;
+
+    // Amount in words
+    doc.setFontSize(8);
+    wordsWrapped.forEach(line => {
+      doc.text(line, pdfWidth - 5, y, { align: 'right' });
+      y += 5;
+    });
+    doc.setFontSize(8);
+
+    // Signature line
+    y += 6;
+    const sigWidth = 32;
+    const sigX = (pdfWidth - sigWidth) / 2;
+    doc.setLineWidth(0.2);
+    doc.line(sigX, y, sigX + sigWidth, y);
+    y += 8;
+
+    // Clinic name
+    doc.text('Tulsi Sugar Care Clinic', pdfWidth / 2, y, { align: 'center' });
+    y += 6;
+
+    // Address
+    doc.setFontSize(8);
+    addrWrapped.forEach(line => {
+      doc.text(line, pdfWidth / 2, y, { align: 'center' });
+      y += 5;
+    });
+
+    // Output: print or save
     if (autoPrint) {
-      win.focus();
-      win.print();
+      if (typeof doc.autoPrint === 'function') {
+        doc.autoPrint();
+      }
+      const url = doc.output('bloburl');
+      const win = window.open(url, '_blank');
+      if (!doc.autoPrint) {
+        win?.addEventListener('load', () => {
+          win.print();
+        });
+      }
+    } else {
+      doc.save(`${payload.invoiceNo || 'receipt'}.pdf`);
     }
   }
 
@@ -201,7 +307,6 @@
    */
   async function openReceipt(autoPrint = false) {
     const items      = collectItems();
-    const clinic     = clinicEl?.value?.trim() || '';
     const doctor     = doctorEl?.value?.trim() || '';
     const rsVal      = rsBottomEl?.value;
     const generatedAt = new Date().toISOString();
@@ -210,7 +315,6 @@
       date      : dateEl.value || todayISOLocal(),
       generatedAt,
       received  : receivedEl.value.trim(),
-      clinicName: clinic || null,
       doctorName: doctor || null,
       items     : items,
       rsBottom  : (rsVal !== undefined && rsVal !== null && rsVal !== '') ? Number(rsVal) : undefined,
@@ -234,7 +338,7 @@
         console.error('Unexpected error saving invoice', err);
       }
     }
-    await generateReceiptHtml(payload, autoPrint);
+    await generateReceiptPdf(payload, autoPrint);
   }
 
   // Hook up buttons

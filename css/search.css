@@ -57,6 +57,28 @@
   margin: 0;
 }
 
+/* Key/value table styling for labs & history */
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--outline);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.detail-table th,
+.detail-table td {
+  padding: 6px 8px;
+  text-align: left;
+}
+.detail-table th {
+  width: 40%;
+  font-weight: 600;
+  color: var(--muted);
+}
+.detail-table tr:nth-child(even) {
+  background: var(--bg);
+}
+
 /* Invoice list styling */
 .invoice-list {
   list-style: none;

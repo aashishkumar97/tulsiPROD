@@ -135,54 +135,51 @@
     addDetail('Mobile', patient.mobile || patient.phone || '');
     detailEl.appendChild(dl);
 
+    // Helper to create a table of key/value pairs
+    function renderTable(obj, title) {
+      const header = document.createElement('h4');
+      header.textContent = title;
+      header.style.marginTop = '12px';
+      detailEl.appendChild(header);
+      const table = document.createElement('table');
+      table.className = 'detail-table';
+      const tbody = document.createElement('tbody');
+      table.appendChild(tbody);
+      Object.entries(obj).forEach(([key, val]) => {
+        if (val === undefined || val === null || val === '') return;
+        const row = document.createElement('tr');
+        const th = document.createElement('th');
+        th.textContent = key.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase());
+        const td = document.createElement('td');
+        td.textContent = val;
+        row.appendChild(th);
+        row.appendChild(td);
+        tbody.appendChild(row);
+      });
+      detailEl.appendChild(table);
+    }
+
     // Labs
     const labs = patient.labs || {};
     if (Object.keys(labs).length > 0) {
-      const labsHeader = document.createElement('h4');
-      labsHeader.textContent = 'Labs & Vitals';
-      labsHeader.style.marginTop = '12px';
-      detailEl.appendChild(labsHeader);
-      const labsDl = document.createElement('dl');
-      for (const [key, val] of Object.entries(labs)) {
-        if (val !== undefined && val !== null && val !== '') {
-          const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase());
-          const dt = document.createElement('dt');
-          dt.textContent = label;
-          const dd = document.createElement('dd');
-          dd.textContent = val;
-          labsDl.appendChild(dt);
-          labsDl.appendChild(dd);
-        }
-      }
-      detailEl.appendChild(labsDl);
+      renderTable(labs, 'Labs & Vitals');
     }
 
     // History
     const hist = patient.history || {};
     if (Object.keys(hist).length > 0) {
-      const histHeader = document.createElement('h4');
-      histHeader.textContent = 'History';
-      histHeader.style.marginTop = '12px';
-      detailEl.appendChild(histHeader);
-      const histDl = document.createElement('dl');
+      const histObj = {};
       for (const [key, data] of Object.entries(hist)) {
-        let value;
         if (data && typeof data === 'object' && 'value' in data) {
           if (data.value === null || data.value === undefined || data.value === '') continue;
-          value = data.value + (data.unit ? ` ${data.unit}` : '');
-        } else {
-          if (data === null || data === undefined || data === '') continue;
-          value = data;
+          histObj[key] = data.value + (data.unit ? ` ${data.unit}` : '');
+        } else if (data !== null && data !== undefined && data !== '') {
+          histObj[key] = data;
         }
-        const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase());
-        const dt = document.createElement('dt');
-        dt.textContent = label;
-        const dd = document.createElement('dd');
-        dd.textContent = value;
-        histDl.appendChild(dt);
-        histDl.appendChild(dd);
       }
-      detailEl.appendChild(histDl);
+      if (Object.keys(histObj).length > 0) {
+        renderTable(histObj, 'History');
+      }
     }
 
     // Invoices
@@ -216,7 +213,7 @@
       editBtn.textContent = 'Edit Patient';
       editBtn.className = 'btn btn-cta';
       editBtn.style.marginTop = '12px';
-      editBtn.href = `edit_patient.html?refNo=${encodeURIComponent(patient.refNo)}`;
+      editBtn.href = `patient_form.html?refNo=${encodeURIComponent(patient.refNo)}`;
       detailEl.appendChild(editBtn);
     }
   }

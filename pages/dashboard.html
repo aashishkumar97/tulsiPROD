@@ -8,6 +8,10 @@
   <link rel="stylesheet" href="../css/style.css" />
   <!-- Chart.js for graphs -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Supabase client library (for database access) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Initialize Supabase client -->
+  <script src="../js/supabase-client.js"></script>
 </head>
 <body class="app-body">
   <!-- Top header -->
@@ -85,10 +89,10 @@
         <article class="stat-card card card--elevated">
           <div class="stat-top">
             <div class="stat-icon money" aria-hidden="true"></div>
-            <span class="stat-label">Invoices (Demo)</span>
+            <span class="stat-label">Invoices Today</span>
           </div>
-          <div class="stat-value" id="statRevenue">$0</div>
-          <div class="stat-sub">This month</div>
+          <div class="stat-value" id="statInvoices">0</div>
+          <div class="stat-sub">Since 12:00 AM</div>
         </article>
       </div>
 

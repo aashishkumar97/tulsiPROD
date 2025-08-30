@@ -557,10 +557,11 @@
   }
 
   // Hook up buttons
-  printBtn?.addEventListener('click', () => {
-    openReceipt(true);
+  // Ensure database save occurs before printing/downloading
+  printBtn?.addEventListener('click', async () => {
+    await openReceipt(true);
   });
-  downloadBtn?.addEventListener('click', () => {
-    openReceipt(false);
+  downloadBtn?.addEventListener('click', async () => {
+    await openReceipt(false);
   });
 })();

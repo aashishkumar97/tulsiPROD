@@ -299,7 +299,8 @@
       doc.text(line, 75, yy, { align: 'right' });
       yy += 3;
     });
-    yy += 2;
+    const signatureGap = 12; // space before signature line
+    yy += signatureGap;
     // Signature line
     const sigLineWidth = 32;
     const sigX = (80 - sigLineWidth) / 2;

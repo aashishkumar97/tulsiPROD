@@ -28,13 +28,13 @@
   </header>
 
   <main class="app-layout search-layout">
-    <section class="content">
+    <!-- Left: search and results -->
+    <section class="search-panel">
       <div class="card card--elevated">
         <header class="section-head">
           <h2>Search Patients</h2>
-          <p class="muted small">Enter a full or partial name to find matching patient records and their invoices.</p>
+          <p class="muted small">Enter a full or partial name to find matching patient records.</p>
         </header>
-        <!-- Search controls -->
         <div class="form-row" style="display:flex; gap:8px; align-items:flex-end;">
           <div style="flex:1;">
             <label for="searchInput">Full Name</label>
@@ -43,10 +43,18 @@
           <button id="searchBtn" class="btn btn-cta">Search</button>
         </div>
         <p id="searchMsg" class="status" aria-live="polite"></p>
-        <!-- Results will be inserted here -->
-        <div id="results" class="results-grid"></div>
+        <ul id="results" class="results-list"></ul>
       </div>
     </section>
+
+    <!-- Right: detail panel -->
+    <aside id="detailPanel" class="card card--elevated detail-panel">
+      <header class="section-head">
+        <h2>Patient Details</h2>
+        <p class="muted small">Select a patient to view history and invoices.</p>
+      </header>
+      <div id="detailContent" class="detail-content"></div>
+    </aside>
   </main>
 
   <footer class="site-foot">

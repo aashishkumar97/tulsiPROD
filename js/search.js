@@ -4,6 +4,7 @@
   const searchBtn   = document.getElementById('searchBtn');
   const searchMsg   = document.getElementById('searchMsg');
   const resultsEl   = document.getElementById('results');
+  const detailEl    = document.getElementById('detailContent');
 
   // Initialise Supabase client if available. These fallback credentials
   // mirror those used elsewhere in the project. If you have different
@@ -98,10 +99,121 @@
     return [];
   }
 
-  // Render the search results. This function is marked async because it
-  // fetches invoices for each patient sequentially.
-  async function renderResults(patients) {
+  async function renderDetail(patient) {
+    if (!patient) {
+      detailEl.innerHTML = '';
+      return;
+    }
+    detailEl.innerHTML = '';
+
+    const header = document.createElement('h3');
+    header.textContent = patient.name || '(Unnamed)';
+    detailEl.appendChild(header);
+
+    const dl = document.createElement('dl');
+    function addDetail(label, value) {
+      if (value !== undefined && value !== null && value !== '') {
+        const dt = document.createElement('dt');
+        dt.textContent = label;
+        const dd = document.createElement('dd');
+        dd.textContent = value;
+        dl.appendChild(dt);
+        dl.appendChild(dd);
+      }
+    }
+    addDetail('Ref No', patient.refNo || patient.id || '');
+    addDetail('Age', patient.age);
+    if (patient.date) {
+      try {
+        const dtObj = new Date(patient.date);
+        addDetail('Date', dtObj.toLocaleDateString());
+      } catch {
+        addDetail('Date', patient.date);
+      }
+    }
+    addDetail('Address', patient.address || '');
+    addDetail('Mobile', patient.mobile || patient.phone || '');
+    detailEl.appendChild(dl);
+
+    // Labs
+    const labs = patient.labs || {};
+    if (Object.keys(labs).length > 0) {
+      const labsHeader = document.createElement('h4');
+      labsHeader.textContent = 'Labs & Vitals';
+      labsHeader.style.marginTop = '12px';
+      detailEl.appendChild(labsHeader);
+      const labsDl = document.createElement('dl');
+      for (const [key, val] of Object.entries(labs)) {
+        if (val !== undefined && val !== null && val !== '') {
+          const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase());
+          const dt = document.createElement('dt');
+          dt.textContent = label;
+          const dd = document.createElement('dd');
+          dd.textContent = val;
+          labsDl.appendChild(dt);
+          labsDl.appendChild(dd);
+        }
+      }
+      detailEl.appendChild(labsDl);
+    }
+
+    // History
+    const hist = patient.history || {};
+    if (Object.keys(hist).length > 0) {
+      const histHeader = document.createElement('h4');
+      histHeader.textContent = 'History';
+      histHeader.style.marginTop = '12px';
+      detailEl.appendChild(histHeader);
+      const histDl = document.createElement('dl');
+      for (const [key, data] of Object.entries(hist)) {
+        let value;
+        if (data && typeof data === 'object' && 'value' in data) {
+          if (data.value === null || data.value === undefined || data.value === '') continue;
+          value = data.value + (data.unit ? ` ${data.unit}` : '');
+        } else {
+          if (data === null || data === undefined || data === '') continue;
+          value = data;
+        }
+        const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase());
+        const dt = document.createElement('dt');
+        dt.textContent = label;
+        const dd = document.createElement('dd');
+        dd.textContent = value;
+        histDl.appendChild(dt);
+        histDl.appendChild(dd);
+      }
+      detailEl.appendChild(histDl);
+    }
+
+    // Invoices
+    const invHeader = document.createElement('h4');
+    invHeader.textContent = 'Invoices';
+    invHeader.style.marginTop = '12px';
+    detailEl.appendChild(invHeader);
+    const invList = document.createElement('ul');
+    invList.className = 'invoice-list';
+    const invoices = await fetchInvoicesForPatient(patient.name);
+    if (invoices && invoices.length > 0) {
+      invoices.forEach(inv => {
+        const li = document.createElement('li');
+        let total = inv.rsBottom;
+        if (total === undefined || total === null) {
+          total = (inv.items || []).reduce((s, r) => s + (Number(r.amt) || 0), 0);
+        }
+        li.textContent = `${inv.invoiceNo || '(no #)'} – ${inv.date || ''} – Rs ${total}`;
+        invList.appendChild(li);
+      });
+    } else {
+      const li = document.createElement('li');
+      li.textContent = 'No invoices.';
+      invList.appendChild(li);
+    }
+    detailEl.appendChild(invList);
+  }
+
+  function renderResults(patients) {
     resultsEl.innerHTML = '';
+    detailEl.innerHTML = '';
     if (!patients || patients.length === 0) {
       searchMsg.textContent = 'No patients found.';
       searchMsg.classList.remove('ok');
@@ -112,71 +224,15 @@
     searchMsg.classList.remove('error');
     searchMsg.classList.remove('ok');
 
-    for (const patient of patients) {
-      const card = document.createElement('div');
-      card.className = 'card card--elevated result-card';
-
-      // Patient name
-      const header = document.createElement('h3');
-      header.textContent = patient.name || '(Unnamed)';
-      card.appendChild(header);
-
-      // Details as definition list
-      const dl = document.createElement('dl');
-      function addDetail(label, value) {
-        if (value !== undefined && value !== null && value !== '') {
-          const dt = document.createElement('dt');
-          dt.textContent = label;
-          const dd = document.createElement('dd');
-          dd.textContent = value;
-          dl.appendChild(dt);
-          dl.appendChild(dd);
-        }
-      }
-      addDetail('Ref No', patient.refNo || patient.id || '');
-      addDetail('Age', patient.age);
-      // Format date if present
-      if (patient.date) {
-        try {
-          const dtObj = new Date(patient.date);
-          addDetail('Date', dtObj.toLocaleDateString());
-        } catch {
-          addDetail('Date', patient.date);
-        }
-      }
-      addDetail('Address', patient.address || '');
-      addDetail('Mobile', patient.mobile || patient.phone || '');
-      card.appendChild(dl);
-
-      // Invoices
-      const invHeader = document.createElement('h4');
-      invHeader.textContent = 'Invoices';
-      invHeader.style.marginTop = '10px';
-      card.appendChild(invHeader);
-
-      const invList = document.createElement('ul');
-      invList.className = 'invoice-list';
-      const invoices = await fetchInvoicesForPatient(patient.name);
-      if (invoices && invoices.length > 0) {
-        invoices.forEach(inv => {
-          const li = document.createElement('li');
-          // Compute total if rsBottom is not set
-          let total = inv.rsBottom;
-          if (total === undefined || total === null) {
-            total = (inv.items || []).reduce((s, r) => s + (Number(r.amt) || 0), 0);
-          }
-          li.textContent = `${inv.invoiceNo || '(no #)'} – ${inv.date || ''} – Rs ${total}`;
-          invList.appendChild(li);
-        });
-      } else {
-        const li = document.createElement('li');
-        li.textContent = 'No invoices.';
-        invList.appendChild(li);
-      }
-      card.appendChild(invList);
-
-      resultsEl.appendChild(card);
-    }
+    patients.forEach(patient => {
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.className = 'result-item';
+      btn.textContent = patient.name || '(Unnamed)';
+      btn.addEventListener('click', () => renderDetail(patient));
+      li.appendChild(btn);
+      resultsEl.appendChild(li);
+    });
   }
 
   // Click handler: perform the search
@@ -194,6 +250,6 @@
     }
     searchMsg.textContent = 'Searching...';
     const patients = await fetchPatients(term);
-    await renderResults(patients);
+    renderResults(patients);
   });
 })();

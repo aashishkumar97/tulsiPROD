@@ -398,11 +398,17 @@
           const { error: insertErr } = await supabaseClient.from('invoices').insert([payload]);
           if (insertErr) {
             console.error('Error saving invoice', insertErr);
+          } else if (msg) {
+            msg.textContent = 'Invoice saved to database.';
+            msg.classList.remove('error'); msg.classList.add('ok');
           }
         }
       } catch (err) {
         console.error('Unexpected error saving invoice', err);
       }
+    } else if (msg) {
+      msg.textContent = 'Invoice saved locally.';
+      msg.classList.remove('error'); msg.classList.add('ok');
     }
     if (autoPrint) {
       await generateReceiptPdf(payload, true);

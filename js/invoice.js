@@ -233,18 +233,31 @@
     y += 6;
 
     // Items list
-    doc.setFontSize(7)
+    doc.setFontSize(7);
+    const itemsStartY = y;
+    const itemsCount = (payload.items && payload.items.length) ? payload.items.length : 1;
+    const reservedHeight =
+      4 + // space before totals
+      6 + // "Sum of Rs" line
+      6 + // "Rupees" line
+      (wordsWrapped.length * 5) + // amount in words lines
+      6 + // space before signature
+      8 + // signature line space
+      6 + // clinic name
+      (addrWrapped.length * 5); // address lines
+    const availableHeight = pdfHeight - reservedHeight - itemsStartY;
+    const lineHeight = Math.max(4, Math.min(6, availableHeight / itemsCount));
     if (payload.items && payload.items.length) {
       payload.items.forEach(item => {
         const label = item.label || '—';
         const amt   = Number(item.amt) || 0;
         const line  = '\u2022 ' + label + ' - Rs ' + amt.toFixed(2);
         doc.text(line, 5, y);
-        y += 6;
+        y += lineHeight;
       });
     } else {
       doc.text('\u2022 —', 5, y);
-      y += 6;
+      y += lineHeight;
     }
 
     // Totals
@@ -289,12 +302,7 @@
         doc.autoPrint();
       }
       const url = doc.output('bloburl');
-      const win = window.open(url, '_blank');
-      if (!doc.autoPrint) {
-        win?.addEventListener('load', () => {
-          win.print();
-        });
-      }
+      window.location.href = url;
     } else {
       doc.save(`${payload.invoiceNo || 'receipt'}.pdf`);
     }

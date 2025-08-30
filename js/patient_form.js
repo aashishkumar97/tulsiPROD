@@ -206,24 +206,98 @@
     });
   }
 
+  // Collect form values for prescription printing/downloading
+  function gatherPrescriptionData() {
+    const ids = [
+      'refNo','date','name','age','cast','address','mobile',
+      'dmAbove','dmUnit','bpAbove','bpUnit','psychAbove','psychUnit',
+      'psychosisAbove','psychosisUnit','ckdAbove','ckdUnit','dfAbove','dfUnit',
+      'others','bp','pulse','temp','spo2','fbs','rbs','bMealSugar','bChol','ldl','tg','hdl',
+      'sCreat','sUric','bmi','weight','presentComplaint','pastComplaint','hoDrugs'
+    ];
+    const data = {};
+    ids.forEach(id => data[id] = (document.getElementById(id)?.value ?? '').trim());
+    data.smoke = document.querySelector('input[name="smoke"]:checked')?.value ?? '';
+    return data;
+  }
+
+  function formatDate(iso) {
+    if (!iso) return new Date().toLocaleDateString();
+    const dt = new Date(iso);
+    return isNaN(dt) ? iso : dt.toLocaleDateString();
+  }
+
+  async function generatePrescriptionPdf(d) {
+    if (!window.jspdf) { console.warn('jsPDF library not loaded'); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    try {
+      const res = await fetch('../images/prescription.png');
+      const blob = await res.blob();
+      const imgData = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      doc.addImage(imgData, 'PNG', 0, 0, 210, 297);
+    } catch (err) {
+      console.warn('Unable to load prescription background', err);
+    }
+
+    function place(val, x, y, opts = {}) {
+      if (!val) return;
+      doc.setFont('helvetica', opts.bold ? 'bold' : 'normal');
+      doc.setFontSize(opts.size || 10);
+      if (opts.maxWidth) {
+        const lines = doc.splitTextToSize(String(val), opts.maxWidth);
+        doc.text(lines, x, y);
+      } else {
+        doc.text(String(val), x, y);
+      }
+    }
+
+    place(formatDate(d.date), 170, 50.2);
+    place(d.name, 25.5, 50.2, { size: 12, bold: true });
+    place(d.age, 150, 50.2, { size: 12 });
+
+    place(d.bp,   38, 120);
+    place(d.spo2, 38, 175, { size: 11 });
+
+    place(d.fbs,        38, 70);
+    place(d.rbs,        38, 80);
+    place(d.bMealSugar, 42, 90);
+    place(d.bChol,      40, 100);
+    place(d.tg,         38, 110);
+    place(d.sCreat,     38, 132.5);
+    place(d.sUric,      42, 142.5);
+    place(d.weight,     38, 155);
+    place(d.bmi,        38, 165);
+
+    place(d.presentComplaint, 80, 90,  { size: 12, maxWidth: 160 });
+    place(d.hoDrugs ? `H/O taken drugs: ${d.hoDrugs}` : '', 80, 130, { size: 12, maxWidth: 160 });
+    place(d.pastComplaint ? `Past History: ${d.pastComplaint}` : '', 80, 150, { size: 12, maxWidth: 160 });
+
+    doc.save('prescription.pdf');
+  }
+
   // ---- Print: stash values → open prescription.html ----
   const printBtn = document.getElementById('printPrescription');
   if (printBtn) {
     printBtn.addEventListener('click', () => {
-      const ids = [
-        'refNo','date','name','age','cast','address','mobile',
-        'dmAbove','dmUnit','bpAbove','bpUnit','psychAbove','psychUnit',
-        'psychosisAbove','psychosisUnit','ckdAbove','ckdUnit','dfAbove','dfUnit',
-        'others','bp','pulse','temp','spo2','fbs','rbs','bMealSugar','bChol','ldl','tg','hdl',
-        'sCreat','sUric','bmi','weight','presentComplaint','pastComplaint','hoDrugs'
-      ];
-      const data = {};
-      ids.forEach(id => data[id] = (document.getElementById(id)?.value ?? '').trim());
-      data.smoke = document.querySelector('input[name="smoke"]:checked')?.value ?? '';
+      const data = gatherPrescriptionData();
       if (!data.date) data.date = new Date().toLocaleDateString();
-
       sessionStorage.setItem('tcc_prescription', JSON.stringify(data));
       window.open('prescription.html', '_blank');
+    });
+  }
+
+  // ---- Download PDF directly ----
+  const downloadBtn = document.getElementById('downloadPrescription');
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', async () => {
+      const data = gatherPrescriptionData();
+      await generatePrescriptionPdf(data);
     });
   }
 })();

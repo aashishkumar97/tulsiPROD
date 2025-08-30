@@ -19,6 +19,9 @@
   const downloadBtn = document.getElementById('downloadPdf');
   // Status message element to show validation errors or success messages
   const msg         = document.getElementById('msg');
+  const patientListEl = document.getElementById('patientList');
+  let patients = [];
+  let selectedPatientRef = null;
 
   // Initialise Supabase client if available. You may replace these
   // placeholders with your own credentials or use a global client.
@@ -33,6 +36,122 @@
     }
   } catch (err) {
     console.warn('Supabase client could not be initialised for invoices', err);
+  }
+
+  // ----- Patient search helpers -----
+  function getLocalPatients() {
+    let list = [];
+    try {
+      const full = JSON.parse(localStorage.getItem('patients_full') || '[]');
+      list = list.concat(full);
+    } catch {}
+    try {
+      const demo = JSON.parse(localStorage.getItem('patients') || '[]');
+      list = list.concat(demo.map(p => ({ refNo: p.id, name: p.name })));
+    } catch {}
+    return list;
+  }
+
+  async function loadPatients() {
+    patients = [];
+    if (supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient
+          .from('patients')
+          .select('refNo, name');
+        if (!error && data) patients = data;
+      } catch (e) {
+        console.error('Error loading patients', e);
+      }
+    }
+    if (!patients.length) {
+      patients = getLocalPatients();
+    }
+    if (patientListEl) {
+      patientListEl.innerHTML = '';
+      patients.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.name;
+        patientListEl.appendChild(opt);
+      });
+    }
+  }
+
+  function matchPatientName(name) {
+    const m = patients.find(p => (p.name || '').toLowerCase() === name.toLowerCase());
+    selectedPatientRef = m ? m.refNo : null;
+  }
+
+  function handlePatientBlur() {
+    const name = receivedEl.value.trim();
+    if (!name) { selectedPatientRef = null; return; }
+    matchPatientName(name);
+    if (!selectedPatientRef) {
+      if (window.confirm(`Patient "${name}" not found. Save patient?`)) {
+        saveDraft();
+        const params = new URLSearchParams({ from: 'invoice', name });
+        window.location.href = `patient_form.html?${params.toString()}`;
+      }
+    }
+  }
+
+  // ----- Draft helpers -----
+  function getFormState() {
+    const items = [];
+    document.querySelectorAll('#serviceItems tr').forEach(tr => {
+      const chk     = tr.querySelector('.svc-check');
+      const labelEl = tr.querySelector('.svc-label');
+      const amtEl   = tr.querySelector('.svc-amt');
+      items.push({
+        checked: chk?.checked || false,
+        label: labelEl ? labelEl.value : tr.cells[1].textContent.trim(),
+        custom: !!labelEl,
+        amt: amtEl?.value || ''
+      });
+    });
+    return {
+      invoiceNo   : invEl.value,
+      date        : dateEl.value,
+      receivedFrom: receivedEl.value,
+      doctorName  : doctorEl?.value || '',
+      rsBottom    : rsBottomEl?.value || '',
+      items
+    };
+  }
+
+  function saveDraft() {
+    localStorage.setItem('INVOICE_DRAFT', JSON.stringify(getFormState()));
+  }
+
+  function loadDraft() {
+    const raw = localStorage.getItem('INVOICE_DRAFT');
+    if (!raw) return;
+    try {
+      const d = JSON.parse(raw);
+      if (d.invoiceNo) invEl.value = d.invoiceNo;
+      if (d.date) dateEl.value = d.date;
+      if (d.receivedFrom) receivedEl.value = d.receivedFrom;
+      if (d.doctorName) doctorEl.value = d.doctorName;
+      if (d.rsBottom) rsBottomEl.value = d.rsBottom;
+      if (Array.isArray(d.items)) {
+        document.querySelectorAll('#serviceItems tr').forEach((tr, i) => {
+          const it = d.items[i];
+          if (!it) return;
+          const chk = tr.querySelector('.svc-check');
+          const labelEl = tr.querySelector('.svc-label');
+          const amtEl = tr.querySelector('.svc-amt');
+          if (chk) chk.checked = it.checked;
+          if (labelEl && it.custom) labelEl.value = it.label;
+          if (amtEl) amtEl.value = it.amt;
+        });
+      }
+    } catch (e) {
+      console.error('Error loading invoice draft', e);
+    }
+  }
+
+  function clearDraft() {
+    localStorage.removeItem('INVOICE_DRAFT');
   }
 
   // Return today's date in yyyy-mm-dd (local)
@@ -62,10 +181,22 @@
     invEl.readOnly = true;
   }
 
-  // Initialize meta and default payer on load
+  // Initialize meta and restore draft/patients on load
   function init() {
     ensureMeta();
-    receivedEl.value = '';
+    loadDraft();
+    const last = localStorage.getItem('LAST_PATIENT');
+    if (last) {
+      try {
+        const p = JSON.parse(last);
+        receivedEl.value = p.name || '';
+        selectedPatientRef = p.refNo || null;
+      } catch {}
+      localStorage.removeItem('LAST_PATIENT');
+    }
+    loadPatients().then(() => {
+      matchPatientName(receivedEl.value.trim());
+    });
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
@@ -80,8 +211,17 @@
       dateEl.value = '';
       ensureMeta();
       receivedEl.value = '';
+      selectedPatientRef = null;
+      clearDraft();
     }, 0);
   });
+
+  window.addEventListener('beforeunload', saveDraft);
+
+  receivedEl?.addEventListener('input', () => {
+    matchPatientName(receivedEl.value.trim());
+  });
+  receivedEl?.addEventListener('blur', handlePatientBlur);
 
   // Collect selected service items into an array
   function collectItems() {
@@ -360,29 +500,28 @@
     const items     = collectItems();
     const doctor    = doctorEl?.value?.trim() || '';
     const rsVal     = rsBottomEl?.value;
+    matchPatientName(receivedEl.value.trim());
     // Build payload matching the invoices table schema
     const payload = {
       invoiceNo    : invEl.value,
       date         : dateEl.value || todayISOLocal(),
       patientName  : receivedEl.value.trim(),
+      patient_refNo: selectedPatientRef,
       doctorName   : doctor || null,
       items        : items,
       rsBottom     : (rsVal !== undefined && rsVal !== null && rsVal !== '') ? Number(rsVal) : null,
     };
 
-    // Validation: Require the "Received with Thanks from" field to be filled
-    if (!payload.patientName) {
+    // Validation: Require the patient to be selected from saved records
+    if (!payload.patientName || !payload.patient_refNo) {
       if (msg) {
-        msg.textContent = 'Please enter the patient name in the “Received with Thanks from” field.';
+        msg.textContent = 'Please select a saved patient using the search field.';
         msg.classList.remove('ok'); msg.classList.add('error');
       }
       return;
-    } else {
-      // Clear any previous error message when input is provided
-      if (msg) {
-        msg.textContent = '';
-        msg.classList.remove('error'); msg.classList.remove('ok');
-      }
+    } else if (msg) {
+      msg.textContent = '';
+      msg.classList.remove('error'); msg.classList.remove('ok');
     }
     // Save to localStorage so a different page could access it if needed
     localStorage.setItem('RECEIPT_DATA', JSON.stringify(payload));
@@ -414,6 +553,7 @@
       return;
     }
     await generateReceiptPdf(payload, false);
+    clearDraft();
   }
 
   // Hook up buttons

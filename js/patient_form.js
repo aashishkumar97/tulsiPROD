@@ -41,6 +41,14 @@
   // Immediately populate the ref number when the form is loaded
   generateAndSetRef();
 
+  const params = new URLSearchParams(window.location.search);
+  const returnTo = params.get('from');
+  const prefillName = params.get('name');
+  if (prefillName) {
+    const nameField = document.getElementById('name');
+    if (nameField) nameField.value = prefillName;
+  }
+
   const el = (id) => document.getElementById(id);
   const getVal = (id) => (el(id)?.value ?? '').trim();
   const numOrNull = (v) => (v === '' ? null : Number(v));
@@ -193,6 +201,11 @@
       if (saved && msg) {
         msg.textContent = supabaseClient ? 'Patient saved to database.' : 'Patient saved locally (offline demo).';
         msg.classList.remove('error'); msg.classList.add('ok');
+      }
+      if (saved && returnTo === 'invoice') {
+        localStorage.setItem('LAST_PATIENT', JSON.stringify({ name: payload.name, refNo: payload.refNo }));
+        window.location.href = 'invoice.html';
+        return;
       }
       // Reset the form and generate a new reference number for the next patient
       form.reset();

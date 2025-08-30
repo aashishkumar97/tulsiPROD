@@ -268,7 +268,7 @@
     // Payer
     doc.text('Received with Thanks from:', 5, y);
     y += 6;
-    doc.text(String(payload.received || ''), 5, y);
+    doc.text(String(payload.patientName || ''), 5, y);
     y += 8;
 
     // Items header
@@ -357,24 +357,23 @@
    * @param {boolean} autoPrint
    */
   async function openReceipt(autoPrint = false) {
-    const items      = collectItems();
-    const doctor     = doctorEl?.value?.trim() || '';
-    const rsVal      = rsBottomEl?.value;
-    const generatedAt = new Date().toISOString();
+    const items     = collectItems();
+    const doctor    = doctorEl?.value?.trim() || '';
+    const rsVal     = rsBottomEl?.value;
+    // Build payload matching the invoices table schema
     const payload = {
-      invoiceNo : invEl.value,
-      date      : dateEl.value || todayISOLocal(),
-      generatedAt,
-      received  : receivedEl.value.trim(),
-      doctorName: doctor || null,
-      items     : items,
-      rsBottom  : (rsVal !== undefined && rsVal !== null && rsVal !== '') ? Number(rsVal) : undefined,
+      invoiceNo    : invEl.value,
+      date         : dateEl.value || todayISOLocal(),
+      patientName  : receivedEl.value.trim(),
+      doctorName   : doctor || null,
+      items        : items,
+      rsBottom     : (rsVal !== undefined && rsVal !== null && rsVal !== '') ? Number(rsVal) : null,
     };
 
     // Validation: Require the "Received with Thanks from" field to be filled
-    if (!payload.received) {
+    if (!payload.patientName) {
       if (msg) {
-        msg.textContent = 'Please enter the name in the “Received with Thanks from” field.';
+        msg.textContent = 'Please enter the patient name in the “Received with Thanks from” field.';
         msg.classList.remove('ok'); msg.classList.add('error');
       }
       return;

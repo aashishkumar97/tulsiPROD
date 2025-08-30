@@ -84,7 +84,7 @@
         const { data: invoices, error } = await supabaseClient
           .from('invoices')
           .select('*')
-          .eq('received', name);
+          .eq('patientName', name);
         if (error) {
           console.error('Error fetching invoices for', name, error);
           return [];

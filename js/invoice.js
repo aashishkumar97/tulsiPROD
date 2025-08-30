@@ -211,26 +211,24 @@
     }
 
     // Invoice number
-    doc.text('Invoice No:', 5, y);
-    doc.text(String(payload.invoiceNo || ''), pdfWidth - 5, y, { align: 'right' });
+    doc.text(`Invoice No: ${String(payload.invoiceNo || '')}`, pdfWidth / 2, y, { align: 'center' });
     y += 6;
 
     // Date with time (Larkana, Pakistan)
-    doc.text('Date:', 5, y);
     const baseDate = payload.date ? new Date(payload.date + 'T00:00:00') : new Date();
     const timeSrc  = payload.generatedAt ? new Date(payload.generatedAt) : new Date();
     const dateStr = `${baseDate.toLocaleDateString('en-PK', { timeZone: 'Asia/Karachi' })} ${timeSrc.toLocaleTimeString('en-PK', { timeZone: 'Asia/Karachi', hour12: false })}`;
-    doc.text(dateStr, pdfWidth - 5, y, { align: 'right' });
+    doc.text(`Date: ${dateStr}`, pdfWidth / 2, y, { align: 'center' });
     y += 6;
 
     // Payer
-    doc.text('Received with Thanks from:', 5, y);
+    doc.text('Received with Thanks from:', pdfWidth / 2, y, { align: 'center' });
     y += 6;
-    doc.text(String(payload.received || ''), 5, y);
+    doc.text(String(payload.received || ''), pdfWidth / 2, y, { align: 'center' });
     y += 8;
 
     // Items header
-    doc.text('On Account of:', 5, y);
+    doc.text('On Account of:', pdfWidth / 2, y, { align: 'center' });
     y += 6;
 
     // Items list
@@ -247,6 +245,8 @@
       6 + // clinic name
       (addrWrapped.length * 5); // address lines
     const availableHeight = pdfHeight - reservedHeight - itemsStartY;
+    const lineHeight = Math.max(5, Math.min(6, availableHeight / itemsCount));
+    const itemFont = Math.max(5, Math.min(7, lineHeight * 0.8));
     const lineHeight = Math.min(6, availableHeight / itemsCount);
     const itemFont = Math.max(1, Math.min(7, lineHeight * 0.8));
     doc.setFontSize(itemFont);
@@ -255,10 +255,12 @@
         const label = item.label || '—';
         const amt   = Number(item.amt) || 0;
         const line  = '\u2022 ' + label + ' - Rs ' + amt.toFixed(2);
-        doc.text(line, 5, y);
+        doc.text(line, pdfWidth / 2, y, { align: 'center' });
         y += lineHeight;
       });
     } else {
+      doc.text('\u2022 —', pdfWidth / 2, y, { align: 'center' });
+
       doc.text('\u2022 —', 5, y);
       y += lineHeight;
     }
@@ -268,17 +270,15 @@
 
     // Totals
     y += 4;
-    doc.text('Sum of Rs', 5, y);
-    doc.text(sum.toFixed(2), pdfWidth - 5, y, { align: 'right' });
+    doc.text(`Sum of Rs ${sum.toFixed(2)}`, pdfWidth / 2, y, { align: 'center' });
     y += 6;
-    doc.text('Rupees', 5, y);
-    doc.text(bottom.toFixed(2), pdfWidth - 5, y, { align: 'right' });
+    doc.text(`Rupees ${bottom.toFixed(2)}`, pdfWidth / 2, y, { align: 'center' });
     y += 6;
 
     // Amount in words
     doc.setFontSize(8);
     wordsWrapped.forEach(line => {
-      doc.text(line, pdfWidth - 5, y, { align: 'right' });
+      doc.text(line, pdfWidth / 2, y, { align: 'center' });
       y += 5;
     });
     doc.setFontSize(8);

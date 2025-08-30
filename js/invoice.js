@@ -131,31 +131,32 @@
     return parts.join(' ') + ' Rupees Only';
   }
 
-  // Load the logo image referenced by a hidden field (#logoPath) into a DataURL
-  // and return its natural dimensions so it can be scaled without distortion.
+  // Load the logo image referenced by a hidden field (#logoPath). Instead of
+  // using fetch (which can fail when the app is opened directly from the
+  // filesystem), draw the image to a canvas and extract a DataURL. The natural
+  // dimensions are returned so the image can be scaled without distortion.
   async function getLogoDataUrl() {
-    try {
-      const logoPathInput = document.getElementById('logoPath');
-      const logoPath = logoPathInput?.value || '../images/logo.png';
-      const res = await fetch(logoPath);
-      const blob = await res.blob();
-      return await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataUrl = reader.result;
-          const img = new Image();
-          img.onload = () =>
-            resolve({ dataUrl, width: img.naturalWidth, height: img.naturalHeight });
-          img.onerror = () => resolve({ dataUrl, width: 0, height: 0 });
-          img.src = dataUrl;
-        };
-        reader.onerror = (e) => reject(e);
-        reader.readAsDataURL(blob);
-      });
-    } catch (err) {
-      console.warn('Unable to load logo for PDF', err);
-      return null;
-    }
+    const logoPathInput = document.getElementById('logoPath');
+    const logoPath = logoPathInput?.value || '../images/logo.png';
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          const dataUrl = canvas.toDataURL('image/png');
+          resolve({ dataUrl, width: img.naturalWidth, height: img.naturalHeight });
+        } catch (err) {
+          console.warn('Unable to convert logo to DataURL', err);
+          resolve(null);
+        }
+      };
+      img.onerror = () => resolve(null);
+      img.src = logoPath;
+    });
   }
 
   /**

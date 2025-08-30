@@ -16,6 +16,13 @@
   const form = document.getElementById('patientForm');
   const msg  = document.getElementById('saveMsg');
   form?.reset();
+
+  const params = new URLSearchParams(window.location.search);
+  const editRef = params.get('refNo');
+  const isEdit = !!editRef;
+  const returnTo = params.get('from');
+  const prefillName = params.get('name');
+
   // Set the date input default to today's date if not already set.
   const dateInput = document.getElementById('date');
   if (dateInput && !dateInput.value) {
@@ -39,22 +46,26 @@
     }
   }
 
-  // Immediately populate the ref number when the form is loaded
-  generateAndSetRef();
+  if (isEdit) {
+    const refField = document.getElementById('refNo');
+    if (refField) {
+      refField.value = editRef;
+      refField.readOnly = true;
+    }
+  } else {
+    generateAndSetRef();
+    if (prefillName) {
+      const nameField = document.getElementById('name');
+      if (nameField) nameField.value = prefillName;
+    }
+  }
 
   const refreshBtn = document.getElementById('refreshPage');
   refreshBtn?.addEventListener('click', () => window.location.reload());
 
-  const params = new URLSearchParams(window.location.search);
-  const returnTo = params.get('from');
-  const prefillName = params.get('name');
-  if (prefillName) {
-    const nameField = document.getElementById('name');
-    if (nameField) nameField.value = prefillName;
-  }
-
   const el = (id) => document.getElementById(id);
   const getVal = (id) => (el(id)?.value ?? '').trim();
+  const setVal = (id, v) => { const e = el(id); if (e) e.value = v ?? ''; };
   const numOrNull = (v) => (v === '' ? null : Number(v));
 
   // Initialize Supabase client
@@ -86,6 +97,99 @@
   }
   function setPatients(list) {
     localStorage.setItem('patients_full', JSON.stringify(list));
+  }
+
+  async function updatePatientInSupabase(refNo, payload) {
+    if (!supabaseClient) return false;
+    try {
+      const { error } = await supabaseClient
+        .from('patients')
+        .update(payload)
+        .eq('refNo', refNo);
+      if (error) {
+        console.error('Error updating patient', error);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('Unexpected error during Supabase update', err);
+      return false;
+    }
+  }
+
+  async function loadPatient() {
+    let patient = null;
+    if (supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient
+          .from('patients')
+          .select('*')
+          .eq('refNo', editRef)
+          .single();
+        if (!error) patient = data;
+      } catch (e) {
+        console.error('Error loading patient', e);
+      }
+    }
+    if (!patient) {
+      const list = getPatients();
+      patient = list.find(p => p.refNo === editRef) || null;
+    }
+    if (!patient) {
+      alert('Patient not found.');
+      return;
+    }
+    setVal('name', patient.name);
+    setVal('cast', patient.cast);
+    setVal('age', patient.age);
+    setVal('date', patient.date ? patient.date.split('T')[0] : '');
+    setVal('address', patient.address);
+    setVal('mobile', patient.mobile);
+
+    const labs = patient.labs || {};
+    setVal('fbs', labs.fbs);
+    setVal('rbs', labs.rbs);
+    setVal('bMealSugar', labs.bMealSugar);
+    setVal('bChol', labs.bChol);
+    setVal('ldl', labs.ldl);
+    setVal('tg', labs.tg);
+    setVal('hdl', labs.hdl);
+    setVal('bp', labs.bp);
+    setVal('sCreat', labs.sCreat);
+    setVal('sUric', labs.sUric);
+    setVal('bmi', labs.bmi);
+    setVal('spo2', labs.spo2);
+    setVal('pulse', labs.pulse);
+    setVal('weight', labs.weight);
+    setVal('temp', labs.temp);
+
+    const hist = patient.history || {};
+    setVal('dmAbove', hist.dm?.value);
+    setVal('dmUnit', hist.dm?.unit);
+    setVal('bpAbove', hist.bp?.value);
+    setVal('bpUnit', hist.bp?.unit);
+    setVal('psychAbove', hist.depressionFits?.value);
+    setVal('psychUnit', hist.depressionFits?.unit);
+    setVal('psychosisAbove', hist.psychosis?.value);
+    setVal('psychosisUnit', hist.psychosis?.unit);
+    setVal('ckdAbove', hist.ckd?.value);
+    setVal('ckdUnit', hist.ckd?.unit);
+    setVal('dfAbove', hist.diabeticFoot?.value);
+    setVal('dfUnit', hist.diabeticFoot?.unit);
+    setVal('others', hist.others);
+    if (hist.smoking) {
+      const r = document.querySelector(`input[name="smoke"][value="${hist.smoking}"]`);
+      if (r) r.checked = true;
+    }
+
+    const comp = patient.complaints || {};
+    setVal('presentComplaint', comp.present);
+    setVal('pastComplaint', comp.past);
+    setVal('hoDrugs', comp.hoDrugs);
+  }
+
+  if (isEdit) {
+    loadPatient();
   }
 
   // Save a patient record to Supabase. Returns true on success, false on error.
@@ -197,9 +301,10 @@
           past: getVal('pastComplaint') || null,
           hoDrugs: getVal('hoDrugs') || null,
         },
-
-        createdAt: new Date().toISOString(),
       };
+      if (!isEdit) {
+        payload.createdAt = new Date().toISOString();
+      }
 
       // Require only Full Name for saving. Age and Mobile are optional.
       if (!payload.name) {
@@ -210,54 +315,90 @@
         return;
       }
 
-      // Duplicate check by name and optional fields
-      const existing = await findExistingPatient(payload);
-      if (existing) {
-        if (window.confirm('Patient already exists in the system. Edit existing page?')) {
-          window.location.href = `edit_patient.html?refNo=${encodeURIComponent(existing.refNo)}`;
-          return;
+      // Duplicate check by name and optional fields when creating
+      if (!isEdit) {
+        const existing = await findExistingPatient(payload);
+        if (existing) {
+          if (window.confirm('Patient already exists in the system. Edit existing page?')) {
+            window.location.href = `patient_form.html?refNo=${encodeURIComponent(existing.refNo)}`;
+            return;
+          }
         }
       }
 
-      // Try to save to Supabase. If credentials are not set or error occurs,
-      // fall back to local storage.
+      // Try to save/update to Supabase. If error occurs, fall back to local storage.
       let saved = false;
+      let dbUpdated = false;
       if (supabaseClient) {
-        saved = await savePatientToSupabase(payload);
+        if (isEdit) {
+          dbUpdated = await updatePatientInSupabase(editRef, payload);
+          saved = dbUpdated;
+        } else {
+          saved = await savePatientToSupabase(payload);
+        }
       }
       if (!saved) {
-        // Fallback to local storage with duplicate check
         const list = getPatients();
-        if (list.some(p => p.refNo === payload.refNo)) {
-          if (msg) {
-            msg.textContent = 'Reference # already exists. Please use a unique value.';
-            msg.classList.remove('ok'); msg.classList.add('error');
+        if (isEdit) {
+          const idx = list.findIndex(p => p.refNo === editRef);
+          if (idx !== -1) {
+            list[idx] = { ...list[idx], ...payload, refNo: editRef };
+          } else {
+            list.push({ ...payload, refNo: editRef });
           }
-          return;
+        } else {
+          if (list.some(p => p.refNo === payload.refNo)) {
+            if (msg) {
+              msg.textContent = 'Reference # already exists. Please use a unique value.';
+              msg.classList.remove('ok'); msg.classList.add('error');
+            }
+            return;
+          }
+          list.push(payload);
         }
-        list.push(payload);
         setPatients(list);
         saved = true;
       }
 
       if (saved && msg) {
-        msg.textContent = supabaseClient ? 'Patient saved to database.' : 'Patient saved locally (offline demo).';
-        msg.classList.remove('error'); msg.classList.add('ok');
+        if (isEdit) {
+          if (dbUpdated) {
+            msg.textContent = 'Patient updated in database.';
+            msg.classList.remove('error'); msg.classList.add('ok');
+          } else if (supabaseClient) {
+            msg.textContent = 'Database update failed; patient saved locally.';
+            msg.classList.remove('ok'); msg.classList.add('error');
+          } else {
+            msg.textContent = 'Patient updated locally (offline demo).';
+            msg.classList.remove('error'); msg.classList.add('ok');
+          }
+        } else {
+          msg.textContent = supabaseClient ? 'Patient saved to database.' : 'Patient saved locally (offline demo).';
+          msg.classList.remove('error'); msg.classList.add('ok');
+        }
       }
-      if (saved && returnTo === 'invoice') {
+
+      if (saved && !isEdit && returnTo === 'invoice') {
         localStorage.setItem('LAST_PATIENT', JSON.stringify({ name: payload.name, refNo: payload.refNo }));
         window.location.href = 'invoice.html';
         return;
       }
-      // Reset the form and generate a new reference number for the next patient
-      form.reset();
-      generateAndSetRef();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      if (!isEdit) {
+        // Reset the form and generate a new reference number for the next patient
+        form.reset();
+        generateAndSetRef();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     });
 
-    // Whenever the form is reset manually, generate a new reference number
+    // Whenever the form is reset manually
     form.addEventListener('reset', () => {
-      generateAndSetRef();
+      if (isEdit) {
+        setTimeout(loadPatient, 0);
+      } else {
+        generateAndSetRef();
+      }
     });
   }
 

@@ -254,6 +254,21 @@
     }
   }
 
+  // When adding a new patient, check if they already exist on name blur
+  const nameField = document.getElementById('name');
+  if (!isEdit && nameField) {
+    nameField.addEventListener('blur', async () => {
+      const nameVal = nameField.value.trim();
+      if (!nameVal) return;
+      const existing = await findExistingPatient({ name: nameVal });
+      if (existing) {
+        if (window.confirm('Patient already exists in the system. Edit existing patient?')) {
+          window.location.href = `editpatient.html?refNo=${encodeURIComponent(existing.refNo)}`;
+        }
+      }
+    });
+  }
+
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -320,7 +335,7 @@
         const existing = await findExistingPatient(payload);
         if (existing) {
           if (window.confirm('Patient already exists in the system. Edit existing page?')) {
-            window.location.href = `patient_form.html?refNo=${encodeURIComponent(existing.refNo)}`;
+            window.location.href = `editpatient.html?refNo=${encodeURIComponent(existing.refNo)}`;
             return;
           }
         }

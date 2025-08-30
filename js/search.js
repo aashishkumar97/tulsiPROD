@@ -213,7 +213,7 @@
       editBtn.textContent = 'Edit Patient';
       editBtn.className = 'btn btn-cta';
       editBtn.style.marginTop = '12px';
-      editBtn.href = `patient_form.html?refNo=${encodeURIComponent(patient.refNo)}`;
+      editBtn.href = `editpatient.html?refNo=${encodeURIComponent(patient.refNo)}`;
       detailEl.appendChild(editBtn);
     }
   }

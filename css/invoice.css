@@ -4,6 +4,12 @@
   --ring:rgba(31,111,235,.18); --radius:16px; --shadow:0 12px 30px rgba(17,24,39,.09);
 }
 
+/* Ensure printed receipts match the physical thermal paper size */
+@page {
+  size: 3in 5in;
+  margin: 0;
+}
+
 /* Base */
 *{box-sizing:border-box} html,body{height:100%}
 body{

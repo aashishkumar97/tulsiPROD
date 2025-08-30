@@ -21,22 +21,19 @@
 
   // ------ Sidebar nav switching ------
   const panels = {
-    create: document.getElementById('panelCreate'),
     search: document.getElementById('panelSearch'),
     invoice: document.getElementById('panelInvoice')
   };
   const navBtns = {
-    create: document.getElementById('navCreate'),
     search: document.getElementById('navSearch'),
     invoice: document.getElementById('navInvoice')
   };
   function activate(which){
     Object.values(panels).forEach(p => p.classList.add('hidden'));
     Object.values(navBtns).forEach(b => b.classList.remove('active'));
-    panels[which].classList.remove('hidden');
-    navBtns[which].classList.add('active');
+    panels[which]?.classList.remove('hidden');
+    navBtns[which]?.classList.add('active');
   }
-  navBtns.create?.addEventListener('click', () => activate('create'));
   // Override the Search click to open the dedicated search page instead of toggling a panel
   navBtns.search?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -48,12 +45,12 @@
   function getPatients(){ try { return JSON.parse(localStorage.getItem('patients') || '[]'); } catch { return []; } }
   function setPatients(list){ localStorage.setItem('patients', JSON.stringify(list)); }
 
-  // Stats
   function sameDay(a,b){
     const da = new Date(a), db = new Date(b);
     return da.getFullYear()===db.getFullYear() && da.getMonth()===db.getMonth() && da.getDate()===db.getDate();
   }
-  function refreshStats(){
+
+  function refreshStatsLocal(){
     const pts = getPatients();
     const today = new Date();
     const todayCount = pts.filter(p => p.createdAt && sameDay(p.createdAt, today)).length;
@@ -61,33 +58,67 @@
 
     document.getElementById('statToday').textContent = todayCount;
     document.getElementById('statTotal').textContent = total;
-    // Demo revenue = total * $85 (placeholder)
-    document.getElementById('statRevenue').textContent = `$${(total*85).toLocaleString()}`;
+    document.getElementById('statInvoices').textContent = '0';
+  }
+
+  async function refreshStats(){
+    if (window.supabaseClient) {
+      try {
+        const pkDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' });
+        const startUtc = new Date(`${pkDate}T00:00:00+05:00`).toISOString();
+        const endUtc   = new Date(`${pkDate}T23:59:59+05:00`).toISOString();
+
+        const { count: todayCount } = await window.supabaseClient
+          .from('patients')
+          .select('*', { count: 'exact', head: true })
+          .gte('createdAt', startUtc)
+          .lt('createdAt', endUtc);
+
+        const { count: totalCount } = await window.supabaseClient
+          .from('patients')
+          .select('*', { count: 'exact', head: true });
+
+        const { count: invoiceCount } = await window.supabaseClient
+          .from('invoices')
+          .select('*', { count: 'exact', head: true })
+          .eq('date', pkDate);
+
+        document.getElementById('statToday').textContent   = todayCount ?? 0;
+        document.getElementById('statTotal').textContent   = totalCount ?? 0;
+        document.getElementById('statInvoices').textContent = invoiceCount ?? 0;
+        return;
+      } catch (err) {
+        console.error('Error fetching stats from Supabase', err);
+      }
+    }
+    refreshStatsLocal();
   }
 
   // ------ New patient form ------
   const form = document.getElementById('newPatientForm');
   const newMsg = document.getElementById('newMsg');
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const name = document.getElementById('pName').value.trim();
-    const dob = document.getElementById('pDob').value;
-    const phone = document.getElementById('pPhone').value.trim();
-    const address = document.getElementById('pAddress').value.trim();
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('pName').value.trim();
+      const dob = document.getElementById('pDob').value;
+      const phone = document.getElementById('pPhone').value.trim();
+      const address = document.getElementById('pAddress').value.trim();
 
-    if(!name){ newMsg.textContent='Name is required.'; newMsg.classList.add('error'); return; }
+      if(!name){ newMsg.textContent='Name is required.'; newMsg.classList.add('error'); return; }
 
-    const pts = getPatients();
-    const id = (pts.at(-1)?.id || 0) + 1;
-    pts.push({ id, name, dob, phone, address, createdAt: new Date().toISOString() });
-    setPatients(pts);
+      const pts = getPatients();
+      const id = (pts.at(-1)?.id || 0) + 1;
+      pts.push({ id, name, dob, phone, address, createdAt: new Date().toISOString() });
+      setPatients(pts);
 
-    newMsg.textContent = `Patient saved (ID: ${id}).`;
-    newMsg.classList.remove('error'); newMsg.classList.add('ok');
-    form.reset();
-    refreshStats();
-    // keep user on create panel
-  });
+      newMsg.textContent = `Patient saved (ID: ${id}).`;
+      newMsg.classList.remove('error'); newMsg.classList.add('ok');
+      form.reset();
+      refreshStats();
+      // keep user on create panel
+    });
+  }
 
   // ------ Charts ------
   const ctxPatients = document.getElementById('chartPatients').getContext('2d');
@@ -143,5 +174,4 @@
 
   // Initial stats & default panel
   refreshStats();
-  activate('create');
 })();

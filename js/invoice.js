@@ -183,6 +183,8 @@
     // Fixed document dimensions: 3in × 5in
     const pdfWidth = 76.2;
     const pdfHeight = 127;
+    const pageTop = 10;
+    const bottomMargin = 10;
     const doc = new jsPDF({ unit: 'mm', format: [pdfWidth, pdfHeight], orientation: 'portrait' });
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
@@ -192,7 +194,26 @@
     const address = 'Near Agha Khan Laboratory VIP Road Larkana';
     const addrWrapped = doc.splitTextToSize(address);
 
-    let y = 10; // generous top margin
+    // Estimate space needed for footer so items can trigger page breaks
+    const footerHeight = 4 + 6 + 6 + 6 + (wordsWrapped.length * 5) + 6 + 8 + 6 + (addrWrapped.length * 5);
+    const pageBottom = pdfHeight - bottomMargin;
+
+    let y = pageTop; // generous top margin
+
+    function addNewPageForItems() {
+      doc.addPage([pdfWidth, pdfHeight], 'portrait');
+      y = pageTop;
+      doc.setFontSize(8);
+      doc.text('On Account of:', 5, y);
+      y += 6;
+      doc.setFontSize(7);
+    }
+
+    function ensureSpace(lineHeight) {
+      if (y + lineHeight + footerHeight > pageBottom) {
+        addNewPageForItems();
+      }
+    }
 
     // Logo with ample room (maintain aspect ratio)
     if (logoData?.dataUrl) {
@@ -249,6 +270,7 @@
     const lineHeight = Math.max(4, Math.min(6, availableHeight / itemsCount));
     if (payload.items && payload.items.length) {
       payload.items.forEach(item => {
+        ensureSpace(6);
         const label = item.label || '—';
         const amt   = Number(item.amt) || 0;
         const line  = '\u2022 ' + label + ' - Rs ' + amt.toFixed(2);
@@ -256,6 +278,7 @@
         y += lineHeight;
       });
     } else {
+      ensureSpace(6);
       doc.text('\u2022 —', 5, y);
       y += lineHeight;
     }
@@ -302,6 +325,7 @@
         doc.autoPrint();
       }
       const url = doc.output('bloburl');
+      // Navigate to the generated PDF directly to avoid popup blockers
       window.location.href = url;
     } else {
       doc.save(`${payload.invoiceNo || 'receipt'}.pdf`);

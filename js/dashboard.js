@@ -78,14 +78,18 @@
           .from('patients')
           .select('*', { count: 'exact', head: true });
 
-        const { count: invoiceCount } = await window.supabaseClient
+        const { data: invoices } = await window.supabaseClient
           .from('invoices')
-          .select('*', { count: 'exact', head: true })
+          .select('rsBottom')
           .eq('date', pkDate);
+
+        const invoiceSum = Array.isArray(invoices)
+          ? invoices.reduce((sum, inv) => sum + (Number(inv.rsBottom) || 0), 0)
+          : 0;
 
         document.getElementById('statToday').textContent   = todayCount ?? 0;
         document.getElementById('statTotal').textContent   = totalCount ?? 0;
-        document.getElementById('statInvoices').textContent = invoiceCount ?? 0;
+        document.getElementById('statInvoices').textContent = invoiceSum ?? 0;
         return;
       } catch (err) {
         console.error('Error fetching stats from Supabase', err);

@@ -183,7 +183,6 @@
           past: getVal('pastComplaint') || null,
           hoDrugs: getVal('hoDrugs') || null,
         },
-        updatedAt: new Date().toISOString(),
       };
 
       let saved = false;

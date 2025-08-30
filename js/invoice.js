@@ -130,13 +130,33 @@
     if (rest)     parts.push(threeDigits(rest));
     return parts.join(' ') + ' Rupees Only';
   }
-
-  // Load the logo image referenced by a hidden field (#logoPath) into a DataURL
-  // and return its natural dimensions so it can be scaled without distortion.
   async function getLogoDataUrl() {
-    try {
+    return new Promise((resolve) => {
       const logoPathInput = document.getElementById('logoPath');
       const logoPath = logoPathInput?.value || '../images/logo.png';
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          const dataUrl = canvas.toDataURL('image/png');
+          resolve({ dataUrl, width: img.naturalWidth, height: img.naturalHeight });
+        } catch (e) {
+          console.warn('Unable to process logo for PDF', e);
+          resolve(null);
+        }
+      };
+      img.onerror = () => {
+        console.warn('Logo image failed to load');
+        resolve(null);
+      };
+      img.src = logoPath;
+    });
+=======
       const res = await fetch(logoPath);
       const blob = await res.blob();
       return await new Promise((resolve, reject) => {
@@ -195,7 +215,10 @@
 
     let y = pageTop; // generous top margin
 
-    // Logo with ample room (maintain aspect ratio)
+    // Logo with ample room (maintain aspect ratio). Reserve vertical space even
+    // if the image fails to load so text never collides with the expected logo
+    // area.
+    const reservedLogoSpace = 28; // mm
     if (logoData?.dataUrl) {
       const logoMaxWidth = 35;  // mm
       const logoMaxHeight = 20; // mm
@@ -208,6 +231,8 @@
       const xLogo = (pdfWidth - logoWidth) / 2;
       doc.addImage(logoData.dataUrl, 'PNG', xLogo, y, logoWidth, logoHeight);
       y += logoHeight + 8;
+    } else {
+      y += reservedLogoSpace; // push text down if no logo
     }
 
     // Invoice number

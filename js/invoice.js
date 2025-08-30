@@ -233,19 +233,36 @@
     y += 6;
 
     // Items list
-    doc.setFontSize(7)
+    const itemsStartY = y;
+    const itemsCount = (payload.items && payload.items.length) ? payload.items.length : 1;
+    const reservedHeight =
+      4 + // space before totals
+      6 + // "Sum of Rs" line
+      6 + // "Rupees" line
+      (wordsWrapped.length * 5) + // amount in words lines
+      6 + // space before signature
+      8 + // signature line space
+      6 + // clinic name
+      (addrWrapped.length * 5); // address lines
+    const availableHeight = Math.max(0, pdfHeight - reservedHeight - itemsStartY);
+    const lineHeight = availableHeight / itemsCount;
+    // Use a font size that fits within the computed line height so all rows stay on one page
+    const itemsFontSize = Math.min(7, Math.max(1, lineHeight - 1));
+    doc.setFontSize(itemsFontSize);
     if (payload.items && payload.items.length) {
       payload.items.forEach(item => {
         const label = item.label || '—';
         const amt   = Number(item.amt) || 0;
         const line  = '\u2022 ' + label + ' - Rs ' + amt.toFixed(2);
         doc.text(line, 5, y);
-        y += 6;
+        y += lineHeight;
       });
     } else {
       doc.text('\u2022 —', 5, y);
-      y += 6;
+      y += lineHeight;
     }
+    // restore default font size for subsequent sections
+    doc.setFontSize(8);
 
     // Totals
     y += 4;
@@ -283,18 +300,19 @@
       y += 5;
     });
 
+    // Guarantee a single-page receipt regardless of content
+    const totalPages = typeof doc.getNumberOfPages === 'function' ? doc.getNumberOfPages() : 1;
+    for (let p = totalPages; p > 1; p--) {
+      doc.deletePage(p);
+    }
+
     // Output: print or save
     if (autoPrint) {
       if (typeof doc.autoPrint === 'function') {
         doc.autoPrint();
       }
       const url = doc.output('bloburl');
-      const win = window.open(url, '_blank');
-      if (!doc.autoPrint) {
-        win?.addEventListener('load', () => {
-          win.print();
-        });
-      }
+      window.location.href = url;
     } else {
       doc.save(`${payload.invoiceNo || 'receipt'}.pdf`);
     }

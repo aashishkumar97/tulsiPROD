@@ -1,20 +1,50 @@
 /* Styles specific to the search patients page */
-.results-grid {
-  display: grid;
-  gap: 16px;
-  margin-top: 16px;
+.search-layout {
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
 }
 
-/* Style definition list for patient details */
-.result-card dl {
+/* Left results list */
+.results-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.result-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--card);
+  border: 1px solid var(--outline);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: box-shadow .15s ease;
+}
+
+.result-item:hover {
+  box-shadow: var(--shadow);
+}
+
+/* Detail panel */
+.detail-panel {
+  padding: 20px;
+  align-self: start;
+}
+
+.detail-content dl {
   margin: 0.5rem 0;
 }
-.result-card dt {
+.detail-content dt {
   font-weight: 600;
   color: var(--muted);
   margin-top: 4px;
 }
-.result-card dd {
+.detail-content dd {
   margin-left: 0;
   margin-bottom: 4px;
 }
@@ -29,3 +59,14 @@
 .invoice-list li {
   margin-bottom: 4px;
 }
+
+/* Responsive: stack panels on small screens */
+@media (max-width: 800px) {
+  .search-layout {
+    grid-template-columns: 1fr;
+  }
+  .detail-panel {
+    order: 2;
+  }
+}
+

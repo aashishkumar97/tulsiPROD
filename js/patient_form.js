@@ -117,6 +117,35 @@
     }
   }
 
+  // Check for an existing patient with same name and optional fields
+  async function findExistingPatient(payload) {
+    if (supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient
+          .from('patients')
+          .select('refNo, name, age, address, mobile')
+          .eq('name', payload.name);
+        if (error || !data) return null;
+        return data.find(p =>
+          (!payload.mobile || p.mobile === payload.mobile) &&
+          (!payload.address || p.address === payload.address) &&
+          (payload.age == null || p.age === payload.age)
+        ) || null;
+      } catch (err) {
+        console.error('Error checking duplicate patient', err);
+        return null;
+      }
+    } else {
+      const list = getPatients();
+      return list.find(p =>
+        p.name === payload.name &&
+        (!payload.mobile || p.mobile === payload.mobile) &&
+        (!payload.address || p.address === payload.address) &&
+        (payload.age == null || p.age === payload.age)
+      ) || null;
+    }
+  }
+
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -175,6 +204,15 @@
           msg.classList.remove('ok'); msg.classList.add('error');
         }
         return;
+      }
+
+      // Duplicate check by name and optional fields
+      const existing = await findExistingPatient(payload);
+      if (existing) {
+        if (window.confirm('Patient already exists in the system. Edit existing page?')) {
+          window.location.href = `edit_patient.html?refNo=${encodeURIComponent(existing.refNo)}`;
+          return;
+        }
       }
 
       // Try to save to Supabase. If credentials are not set or error occurs,

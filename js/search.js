@@ -209,6 +209,16 @@
       invList.appendChild(li);
     }
     detailEl.appendChild(invList);
+
+    // --- Edit button ---
+    if (patient.refNo) {
+      const editBtn = document.createElement('a');
+      editBtn.textContent = 'Edit Patient';
+      editBtn.className = 'btn btn-cta';
+      editBtn.style.marginTop = '12px';
+      editBtn.href = `edit_patient.html?refNo=${encodeURIComponent(patient.refNo)}`;
+      detailEl.appendChild(editBtn);
+    }
   }
 
   function renderResults(patients) {

@@ -90,8 +90,9 @@
           <!-- Payer details -->
           <div class="form-row">
             <label for="receivedFrom">Received with Thanks from:</label>
-            <input id="receivedFrom" placeholder="Patient name" required />
-            <span class="hint">Enter the name of the person paying.</span>
+            <input id="receivedFrom" list="patientList" placeholder="Search saved patient" required />
+            <datalist id="patientList"></datalist>
+            <span class="hint">Search patient; if not found you'll be prompted to add.</span>
           </div>
           <!-- Sum of Rs removed (PDF total is computed from items) -->
         </div>

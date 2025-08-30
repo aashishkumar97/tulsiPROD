@@ -17,6 +17,8 @@
   const printBtn    = document.getElementById('printPage');
   const resetBtn    = document.getElementById('resetForm');
   const downloadBtn = document.getElementById('downloadPdf');
+  const form        = document.getElementById('invoiceForm');
+  const refreshBtn  = document.getElementById('refreshPage');
   // Status message element to show validation errors or success messages
   const msg         = document.getElementById('msg');
   const patientListEl = document.getElementById('patientList');
@@ -183,6 +185,7 @@
 
   // Initialize meta and restore draft/patients on load
   function init() {
+    form?.reset();
     ensureMeta();
     loadDraft();
     const last = localStorage.getItem('LAST_PATIENT');
@@ -193,6 +196,9 @@
         selectedPatientRef = p.refNo || null;
       } catch {}
       localStorage.removeItem('LAST_PATIENT');
+    } else {
+      receivedEl.value = '';
+      selectedPatientRef = null;
     }
     loadPatients().then(() => {
       matchPatientName(receivedEl.value.trim());
@@ -216,7 +222,12 @@
     }, 0);
   });
 
-  window.addEventListener('beforeunload', saveDraft);
+  refreshBtn?.addEventListener('click', () => {
+    clearDraft();
+    window.location.reload();
+  });
+
+  // Removed automatic draft saving to keep form blank when revisiting
 
   receivedEl?.addEventListener('input', () => {
     matchPatientName(receivedEl.value.trim());
@@ -550,9 +561,13 @@
     }
     if (autoPrint) {
       await generateReceiptPdf(payload, true);
-      return;
+    } else {
+      await generateReceiptPdf(payload, false);
     }
-    await generateReceiptPdf(payload, false);
+    form?.reset();
+    ensureMeta();
+    receivedEl.value = '';
+    selectedPatientRef = null;
     clearDraft();
   }
 

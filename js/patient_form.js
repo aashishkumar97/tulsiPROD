@@ -15,6 +15,7 @@
 
   const form = document.getElementById('patientForm');
   const msg  = document.getElementById('saveMsg');
+  form?.reset();
   // Set the date input default to today's date if not already set.
   const dateInput = document.getElementById('date');
   if (dateInput && !dateInput.value) {
@@ -40,6 +41,9 @@
 
   // Immediately populate the ref number when the form is loaded
   generateAndSetRef();
+
+  const refreshBtn = document.getElementById('refreshPage');
+  refreshBtn?.addEventListener('click', () => window.location.reload());
 
   const params = new URLSearchParams(window.location.search);
   const returnTo = params.get('from');

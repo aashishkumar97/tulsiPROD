@@ -195,9 +195,11 @@
         const idx = list.findIndex(p => p.refNo === refNo);
         if (idx !== -1) {
           list[idx] = { ...list[idx], ...payload, refNo };
-          setPatients(list);
-          saved = true;
+        } else {
+          list.push({ ...payload, refNo });
         }
+        setPatients(list);
+        saved = true;
       }
 
       if (saved && msg) {

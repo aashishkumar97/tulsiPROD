@@ -508,9 +508,11 @@
    * @param {boolean} autoPrint
    */
   async function openReceipt(autoPrint = false) {
-    const items     = collectItems();
-    const doctor    = doctorEl?.value?.trim() || '';
-    const rsVal     = rsBottomEl?.value;
+    const items  = collectItems();
+    const doctor = doctorEl?.value?.trim() || '';
+    // Calculate the total from all item amounts and show it in the Rs field
+    const sum    = items.reduce((s, r) => s + (parseFloat(r.amt) || 0), 0);
+    if (rsBottomEl) rsBottomEl.value = sum ? String(sum) : '';
     matchPatientName(receivedEl.value.trim());
     // Build payload matching the invoices table schema
     const payload = {
@@ -520,7 +522,7 @@
       patientRefNo: selectedPatientRef,
       doctorName  : doctor || null,
       items       : items,
-      rsBottom    : (rsVal !== undefined && rsVal !== null && rsVal !== '') ? Number(rsVal) : null,
+      rsBottom    : sum,
     };
 
     // Validation: Require the patient to be selected from saved records
@@ -545,7 +547,6 @@
           .eq('invoiceNo', payload.invoiceNo);
         if (!fetchErr && (!existing || existing.length === 0)) {
           const dbPayload = { ...payload };
-          delete dbPayload.patientName;
           const { error: insertErr } = await supabaseClient.from('invoices').insert([dbPayload]);
           if (insertErr) {
             console.error('Error saving invoice', insertErr);

@@ -148,7 +148,7 @@
         name: getVal('name'),
         cast: getVal('cast') || null,
         age: numOrNull(getVal('age')),
-        date: getVal('date'),
+        date: getVal('date') || null,
         address: getVal('address') || null,
         mobile: getVal('mobile') || null,
         labs: {
@@ -186,8 +186,10 @@
       };
 
       let saved = false;
+      let dbUpdated = false;
       if (supabaseClient) {
-        saved = await updatePatient(payload);
+        dbUpdated = await updatePatient(payload);
+        saved = dbUpdated;
       }
       if (!saved) {
         const list = getPatients();
@@ -201,9 +203,17 @@
         saved = true;
       }
 
-      if (saved && msg) {
-        msg.textContent = supabaseClient ? 'Patient updated in database.' : 'Patient updated locally (offline demo).';
-        msg.classList.remove('error'); msg.classList.add('ok');
+      if (msg) {
+        if (dbUpdated) {
+          msg.textContent = 'Patient updated in database.';
+          msg.classList.remove('error'); msg.classList.add('ok');
+        } else if (supabaseClient) {
+          msg.textContent = 'Database update failed; patient saved locally.';
+          msg.classList.remove('ok'); msg.classList.add('error');
+        } else {
+          msg.textContent = 'Patient updated locally (offline demo).';
+          msg.classList.remove('error'); msg.classList.add('ok');
+        }
       }
     });
 

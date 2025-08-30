@@ -514,17 +514,17 @@
     matchPatientName(receivedEl.value.trim());
     // Build payload matching the invoices table schema
     const payload = {
-      invoiceNo    : invEl.value,
-      date         : dateEl.value || todayISOLocal(),
-      patientName  : receivedEl.value.trim(),
-      patient_refNo: selectedPatientRef,
-      doctorName   : doctor || null,
-      items        : items,
-      rsBottom     : (rsVal !== undefined && rsVal !== null && rsVal !== '') ? Number(rsVal) : null,
+      invoiceNo   : invEl.value,
+      date        : dateEl.value || todayISOLocal(),
+      patientName : receivedEl.value.trim(),
+      patientRefNo: selectedPatientRef,
+      doctorName  : doctor || null,
+      items       : items,
+      rsBottom    : (rsVal !== undefined && rsVal !== null && rsVal !== '') ? Number(rsVal) : null,
     };
 
     // Validation: Require the patient to be selected from saved records
-    if (!payload.patientName || !payload.patient_refNo) {
+    if (!payload.patientName || !payload.patientRefNo) {
       if (msg) {
         msg.textContent = 'Please select a saved patient using the search field.';
         msg.classList.remove('ok'); msg.classList.add('error');
@@ -544,7 +544,9 @@
           .select('invoiceNo')
           .eq('invoiceNo', payload.invoiceNo);
         if (!fetchErr && (!existing || existing.length === 0)) {
-          const { error: insertErr } = await supabaseClient.from('invoices').insert([payload]);
+          const dbPayload = { ...payload };
+          delete dbPayload.patientName;
+          const { error: insertErr } = await supabaseClient.from('invoices').insert([dbPayload]);
           if (insertErr) {
             console.error('Error saving invoice', insertErr);
           } else if (msg) {

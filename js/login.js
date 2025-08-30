@@ -9,7 +9,7 @@
   // index.html this resolves to `pages/dashboard.html`.
   const DASHBOARD_PATH = 'pages/dashboard.html';
 
-  const DEMO = { username: 'test', password: 'test' };
+  const DEMO = { username: 'test', password: 'welcome1' };
 
   const form = document.getElementById('loginForm');
   const msg = document.getElementById('loginMsg');
@@ -19,7 +19,6 @@
   if (btnDemo) {
     btnDemo.addEventListener('click', () => {
       document.getElementById('username').value = DEMO.username;
-      document.getElementById('password').value = DEMO.password;
     });
   }
 

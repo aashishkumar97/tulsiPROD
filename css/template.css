@@ -1,11 +1,12 @@
-/* Page set to 80mm width x 127mm (≈5in) height */
+/* Page set to 72.1mm width x 297mm height (80mm roll ~72.1mm printable) */
 @page {
-  size: 80mm 127mm;
+  /* 80mm roll: printable width ≈ 72.1mm; dynamic height */
+  size: 72.1mm auto;
   margin: 0;
 }
 
 * { box-sizing: border-box; }
-html, body { height: 100%; }
+html, body { height: auto; }
 body {
   margin: 0;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
@@ -14,10 +15,9 @@ body {
 }
 
 /* Roll container — fixed height to cap at 5 inches */
-.roll {
-  width: 80mm;                 /* match @page width */
+.roll { width: 72.1mm;                 /* match @page width */
   padding: 5mm 4mm 6mm;        /* inner margins */
-  height: 127mm;               /* hard cap = 5 inches */
+  /* hard cap = 5 inches */
   display: flex;
   flex-direction: column;
   overflow: hidden;            /* never exceed 5 inches visually */
@@ -79,14 +79,17 @@ body {
 
 /* (kept) helpers for older structure */
 .receipt-body, .receipt {
-  height: 100%;
+  height: auto;
   display: flex;
   flex-direction: column;
 }
-.signature-block { margin-top: auto; text-align: center; }
+.signature-block { margin-top: 4mm; text-align: center; }
 .signature-line {
   border: none;
   border-top: 2px solid #000;
   width: 60%;
   margin: 0 auto 6px auto;
 }
+
+/* ALL BOLD */
+.roll, .roll * { font-weight: 700 !important; }

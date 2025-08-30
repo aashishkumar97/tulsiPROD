@@ -160,10 +160,10 @@
         createdAt: new Date().toISOString(),
       };
 
-      // Require Full Name, Age and Mobile number for saving
-      if (!payload.name || !payload.age || !payload.mobile) {
+      // Require only Full Name for saving. Age and Mobile are optional.
+      if (!payload.name) {
         if (msg) {
-          msg.textContent = 'Please fill Full Name, Age, and Mobile no.';
+          msg.textContent = 'Please fill Full Name.';
           msg.classList.remove('ok'); msg.classList.add('error');
         }
         return;

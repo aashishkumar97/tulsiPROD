@@ -23,7 +23,7 @@ a{color:var(--primary);text-decoration:none}
 }
 .brand{display:flex;align-items:center;gap:12px}
 .logo{
-  width:28px;height:28px;border-radius:7px;
+  width:38px;height:38px;border-radius:10px;
   background:conic-gradient(from 225deg,#79b4ff,#00d1cf,#79b4ff);
   box-shadow:inset 0 0 0 6px rgba(255,255,255,.8)
 }
@@ -153,3 +153,6 @@ input:focus,select:focus{border-color:#7fb2ff;box-shadow:0 0 0 4px var(--ring);b
   .card{border:none;box-shadow:none;padding:0}
   .only-print{display:block}
 }
+
+/* RECEIPT PREVIEW BOLD */
+.receipt, .receipt * { font-weight: 700 !important; }

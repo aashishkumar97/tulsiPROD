@@ -1,0 +1,8 @@
+
+/* Thermal overrides to ensure HTML print uses roll width, auto height, and zero margins */
+@media print {
+  @page { size: 80mm auto; margin: 0; }
+  html, body { width: 80mm; height: auto !important; margin: 0 !important; padding: 0 !important; }
+  .receipt, .roll, .page { width: 72.1mm !important; margin: 0 auto !important; height: auto !important; min-height: 0 !important; }
+  .app-header,.site-foot,.no-print,.section-actions{ display: none !important; }
+}

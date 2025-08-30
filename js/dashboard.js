@@ -36,9 +36,13 @@
     panels[which].classList.remove('hidden');
     navBtns[which].classList.add('active');
   }
-  navBtns.create.addEventListener('click', () => activate('create'));
-  navBtns.search.addEventListener('click', () => activate('search'));
-  navBtns.invoice.addEventListener('click', () => activate('invoice'));
+  navBtns.create?.addEventListener('click', () => activate('create'));
+  // Override the Search click to open the dedicated search page instead of toggling a panel
+  navBtns.search?.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.location.href = 'search.html';
+  });
+  navBtns.invoice?.addEventListener('click', () => activate('invoice'));
 
   // ------ Local demo patient store (from earlier form) ------
   function getPatients(){ try { return JSON.parse(localStorage.getItem('patients') || '[]'); } catch { return []; } }

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tulsi Care Clinic – Search Patients</title>
+  <!-- Reuse the shared styles for a consistent look and feel -->
+  <link rel="stylesheet" href="../css/style.css" />
+  <!-- Optional: additional styles specific to the search page -->
+  <link rel="stylesheet" href="../css/search.css" />
+  <!-- Supabase client library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Initialise a global supabase client if available -->
+  <script src="../js/supabase-client.js"></script>
+</head>
+<body class="app-body">
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo" aria-hidden="true"></div>
+      <div class="brand-text">
+        <h1>Tulsi Care Clinic</h1>
+        <p>Doctor Portal</p>
+      </div>
+    </div>
+    <nav class="nav-actions">
+      <a class="btn btn-outline" href="dashboard.html">Back to Dashboard</a>
+    </nav>
+  </header>
+
+  <main class="app-layout search-layout">
+    <section class="content">
+      <div class="card card--elevated">
+        <header class="section-head">
+          <h2>Search Patients</h2>
+          <p class="muted small">Enter a full or partial name to find matching patient records and their invoices.</p>
+        </header>
+        <!-- Search controls -->
+        <div class="form-row" style="display:flex; gap:8px; align-items:flex-end;">
+          <div style="flex:1;">
+            <label for="searchInput">Full Name</label>
+            <input id="searchInput" placeholder="Enter full name or part of name" />
+          </div>
+          <button id="searchBtn" class="btn btn-cta">Search</button>
+        </div>
+        <p id="searchMsg" class="status" aria-live="polite"></p>
+        <!-- Results will be inserted here -->
+        <div id="results" class="results-grid"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-foot">
+    <small>© <span id="year"></span> Tulsi Care Clinic. All rights reserved.</small>
+  </footer>
+
+  <!-- Search logic -->
+  <script src="../js/search.js"></script>
+  <script>
+    // Auth guard + year
+    if (sessionStorage.getItem('auth') !== 'true') window.location.replace('../index.html');
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+/* Styles specific to the search patients page */
+.results-grid {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+/* Style definition list for patient details */
+.result-card dl {
+  margin: 0.5rem 0;
+}
+.result-card dt {
+  font-weight: 600;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.result-card dd {
+  margin-left: 0;
+  margin-bottom: 4px;
+}
+
+/* Invoice list styling */
+.invoice-list {
+  list-style-type: disc;
+  margin-left: 20px;
+  margin-top: 4px;
+  padding-left: 0;
+}
+.invoice-list li {
+  margin-bottom: 4px;
+}

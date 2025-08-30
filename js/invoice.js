@@ -257,12 +257,13 @@
     doc.setFontSize(7);
     const itemsStartY = y;
     const itemsCount = (payload.items && payload.items.length) ? payload.items.length : 1;
+    const signatureGap = 20; // space reserved before the signature line
     const reservedHeight =
       4 + // space before totals
       6 + // "Sum of Rs" line
       6 + // "Rupees" line
       (wordsWrapped.length * 5) + // amount in words lines
-      6 + // space before signature
+      signatureGap + // space before signature
       8 + // signature line space
       6 + // clinic name
       (addrWrapped.length * 5); // address lines
@@ -301,7 +302,7 @@
     doc.setFontSize(8);
 
     // Signature line
-    y += 6;
+    y += signatureGap;
     const sigWidth = 32;
     const sigX = (pdfWidth - sigWidth) / 2;
     doc.setLineWidth(0.2);
